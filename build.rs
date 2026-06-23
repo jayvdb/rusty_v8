@@ -578,7 +578,10 @@ fn prebuilt_features_suffix() -> String {
 
 fn static_lib_name(suffix: &str) -> String {
   let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
-  if target_os == "windows" {
+  let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap();
+  // Only MSVC uses the `rusty_v8.lib` naming; GNU/Clang Windows toolchains
+  // (windows-gnu / windows-gnullvm) follow the Unix `librusty_v8.a` convention.
+  if target_os == "windows" && target_env == "msvc" {
     format!("rusty_v8{suffix}.lib")
   } else {
     format!("librusty_v8{suffix}.a")
@@ -851,7 +854,9 @@ fn print_link_flags() {
       } else if target.contains("apple")
         || target.contains("freebsd")
         || target.contains("openbsd")
+        || target.contains("gnullvm")
       {
+        // windows-gnullvm uses the Clang/llvm-mingw libc++ as its C++ stdlib.
         println!("cargo:rustc-link-lib=dylib=c++");
       } else if target.contains("android") {
         println!("cargo:rustc-link-lib=dylib=c++_shared");
@@ -860,6 +865,7 @@ fn print_link_flags() {
       }
     }
   }
+  let target = env::var("TARGET").unwrap();
   let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
   let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap();
 
@@ -879,6 +885,13 @@ fn print_link_flags() {
     } else {
       println!("cargo:rustc-link-lib=dylib=msvcprt");
     }
+  } else if target.ends_with("windows-gnu") {
+    // GNU (GCC) mingw toolchains keep atomics in a separate library.
+    println!("cargo:rustc-link-lib=atomic");
+  } else if target.ends_with("windows-gnullvm") {
+    // llvm-mingw builds V8 against Win32 threads via a pthread shim that must
+    // be linked explicitly.
+    println!("cargo:rustc-link-lib=pthread");
   }
 }
 

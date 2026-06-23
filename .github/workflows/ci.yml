@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, more-win-targets]
     tags: ["**"]
   pull_request:
     branches: [main]
@@ -27,184 +27,14 @@ jobs:
         !contains(github.event.pull_request.labels.*.name, 'no-fail-fast') }}
       matrix:
         config:
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: true
-            cargo: cargo
-
+          # Non-Windows triples (macOS / Linux / riscv) are intentionally dropped on this fork to avoid burning
+          # GHA minutes -- the only goal here is the Windows targets. Kept: x86_64-pc-windows-msvc as a known-good
+          # control; the new x86_64-pc-windows-gnullvm target lives in its own `build-windows-gnullvm` job below
+          # because it needs the llvm-mingw toolchain + V8 source patches the shared steps don't provide.
           - os: ${{ github.repository == 'denoland/rusty_v8' && 'windows-2022-xxl' || 'windows-2022' }}
             target: x86_64-pc-windows-msvc
             variant: release # Note: we do not support windows debug builds.
             v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: aarch64-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: aarch64-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: riscv64gc-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: riscv64gc-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            cargo: cargo
-
-          # simdutf builds
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: macos-15-large
-            target: x86_64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: debug
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: macos-15
-            target: aarch64-apple-darwin
-            variant: release
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: x86_64-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: aarch64-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: aarch64-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: riscv64gc-unknown-linux-gnu
-            variant: debug
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'ubuntu-22.04-xl' || 'ubuntu-22.04' }}
-            target: riscv64gc-unknown-linux-gnu
-            variant: release
-            v8_enable_pointer_compression: false
-            simdutf: true
-            cargo: cargo
-
-          - os: ${{ github.repository == 'denoland/rusty_v8' && 'windows-2022-xxl' || 'windows-2022' }}
-            target: x86_64-pc-windows-msvc
-            variant: release # Note: we do not support windows debug builds.
-            v8_enable_pointer_compression: false
-            simdutf: true
             cargo: cargo
 
     env:
@@ -382,84 +212,6 @@ jobs:
         with:
           name: src_binding${{ env.FEATURES_SUFFIX }}_${{ matrix.config.variant }}_${{ matrix.config.target }}.rs
           path: target/src_binding${{ env.FEATURES_SUFFIX }}_${{ matrix.config.variant }}_${{ matrix.config.target }}.rs
-
-  build-asan:
-    name: asan aarch64-apple-darwin
-    runs-on: macos-15
-    timeout-minutes: 180
-    env:
-      V8_FROM_SOURCE: true
-      RUSTFLAGS: -D warnings
-
-    steps:
-      - name: Configure git
-        run: git config --global core.symlinks true
-
-      - name: Clone repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 10
-          submodules: recursive
-
-      - name: Install rust
-        uses: dsherret/rust-toolchain-file@v1
-
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: Install nextest
-        run: cargo binstall cargo-nextest --secure --locked
-
-      - name: Install python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11.x
-          architecture: x64
-
-      - name: Write git_submodule_status.txt
-        run: git submodule status --recursive > git_submodule_status.txt
-
-      - name: Cache
-        uses: actions/cache@v4
-        with:
-          path: |-
-            target/sccache
-            target/*/.*
-            target/*/build
-            target/*/deps
-          key: cargo1-aarch64-apple-darwin-asan-false-${{ hashFiles('Cargo.lock', 'build.rs', 'git_submodule_status.txt') }}
-          restore-keys: cargo1-aarch64-apple-darwin-asan-false-
-
-      - name: Install and start sccache
-        shell: pwsh
-        env:
-          SCCACHE_DIR: ${{ github.workspace }}/target/sccache
-          SCCACHE_CACHE_SIZE: 256M
-          SCCACHE_IDLE_TIMEOUT: 0
-        run: |
-          $version = "v0.8.2"
-          $platform = "aarch64-apple-darwin"
-          $basename = "sccache-$version-$platform"
-          $url = "https://github.com/mozilla/sccache/releases/download/$version/$basename.tar.gz"
-          cd ~
-          curl -LO $url
-          tar -xzvf "$basename.tar.gz"
-          . $basename/sccache --start-server
-          echo "$(pwd)/$basename" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Install Rust (nightly)
-        uses: dtolnay/rust-toolchain@nightly
-
-      - name: Test (ASAN)
-        env:
-          SCCACHE_IDLE_TIMEOUT: 0
-        # https://github.com/rust-lang/rust/issues/87215
-        run: |
-          rustup component add rust-src --toolchain nightly-aarch64-apple-darwin
-          # Is there a better way to install this tool?
-          curl -O http://commondatastorage.googleapis.com/chromium-browser-clang-staging/Mac/dsymutil-llvmorg-17-init-19076-g5533fc10-1.tgz
-          tar -C tools/clang/dsymutil/ -xvzf dsymutil-llvmorg-17-init-19076-g5533fc10-1.tgz
-          V8_FROM_SOURCE=true RUSTFLAGS="-C opt-level=1 -Zsanitizer=address" cargo +nightly -Z build-std nextest run --lib --bins --tests -v --cargo-verbose --cargo-verbose --target aarch64-apple-darwin
 
   build-windows-arm64:
     name: release aarch64-pc-windows-msvc
@@ -686,6 +438,110 @@ jobs:
           RUSTY_V8_ARCHIVE: ${{ github.workspace }}/rusty_v8_release_aarch64-pc-windows-msvc.lib.gz
           RUSTY_V8_SRC_BINDING_PATH: ${{ github.workspace }}/src_binding_release_aarch64-pc-windows-msvc.rs
         run: cargo nextest run -v --all-targets --locked --target aarch64-pc-windows-msvc --release --no-fail-fast
+
+  build-windows-gnullvm:
+    name: release x86_64-pc-windows-gnullvm
+    runs-on: ${{ github.repository == 'denoland/rusty_v8' && 'windows-2022-xxl' || 'windows-2022' }}
+    timeout-minutes: 180
+    env:
+      CARGO_VARIANT_FLAG: --release
+      V8_FROM_SOURCE: true
+      LIB_NAME: librusty_v8
+      LIB_EXT: a
+      FEATURES_SUFFIX: ''
+      TARGET: x86_64-pc-windows-gnullvm
+    steps:
+      - name: Configure git
+        run: git config --global core.symlinks true
+
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+          submodules: recursive
+
+      - uses: dsherret/rust-toolchain-file@v1
+
+      - name: Install gnullvm target
+        run: rustup target add x86_64-pc-windows-gnullvm
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11.x
+          architecture: x64
+
+      # llvm-mingw is the OSS Clang/LLVM mingw toolchain that emits Itanium-ABI / UCRT objects compatible with
+      # rustc's x86_64-pc-windows-gnullvm target (clang-cl/MSVC objects are not). `gh release download` with no tag
+      # grabs the latest release; the asset name embeds the date, so glob it and expose its bin/ on PATH.
+      - name: Install llvm-mingw toolchain
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\llvm-mingw-dl | Out-Null
+          gh release download --repo mstorsjo/llvm-mingw --pattern '*-ucrt-x86_64.zip' --dir C:\llvm-mingw-dl
+          $zip = Get-ChildItem C:\llvm-mingw-dl\*.zip | Select-Object -First 1
+          Expand-Archive -Path $zip.FullName -DestinationPath C:\ -Force
+          $root = Get-ChildItem -Directory C:\llvm-mingw-*-ucrt-x86_64 | Select-Object -First 1
+          echo "LLVM_MINGW_ROOT=$($root.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "$($root.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Write git_submodule_status.txt
+        run: git submodule status --recursive > git_submodule_status.txt
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |-
+            target/sccache
+            target/x86_64-pc-windows-gnullvm/release/gn_out
+          key: cargo1-x86_64-pc-windows-gnullvm-release-${{ hashFiles('Cargo.lock', 'build.rs', 'gnullvm/**', 'git_submodule_status.txt') }}
+          restore-keys: cargo1-x86_64-pc-windows-gnullvm-release-
+
+      # Re-targets the vendored Chromium sub-repos at the llvm-mingw toolchain. Iteration 1 is expected to surface
+      # patches that need rebasing against the pinned V8 revision -- the script lists them all in one run.
+      - name: Apply mingw patches to V8 source
+        shell: bash
+        run: ./gnullvm/apply-patches.sh
+
+      # GN_ARGS mirrors the MSYS2 mingw-w64-v8 recipe but uses lld (llvm-mingw ships it) and points clang_base_path
+      # at the llvm-mingw root. build.rs appends GN_ARGS verbatim after its own args, so these override. PRINT_GN_ARGS
+      # echoes the final resolved arg set for debugging. Forward slashes are valid in gn paths on Windows.
+      - name: Build
+        shell: bash
+        env:
+          PRINT_GN_ARGS: true
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER: x86_64-w64-mingw32-clang
+        run: |
+          root="$(cygpath -m "$LLVM_MINGW_ROOT")"
+          export GN_ARGS="is_clang=true clang_base_path=\"$root\" use_lld=true use_custom_libcxx=false use_sysroot=false treat_warnings_as_errors=false v8_enable_etw_stack_walking=false v8_enable_system_instrumentation=false v8_enable_temporal_support=false v8_enable_verify_heap=false v8_enable_partition_alloc=false v8_use_external_startup_data=false"
+          cargo build -vv --cargo-verbose --locked --target x86_64-pc-windows-gnullvm --release
+
+      - name: Test
+        shell: bash
+        run: cargo nextest run -v --all-targets --locked --target x86_64-pc-windows-gnullvm --release --no-fail-fast
+
+      - name: Prepare binary publish
+        shell: bash
+        run: |
+          out=target/x86_64-pc-windows-gnullvm/release/gn_out
+          gzip -9c "$out/obj/librusty_v8.a" > target/librusty_v8_release_x86_64-pc-windows-gnullvm.a.gz
+          ls -l target/librusty_v8_release_x86_64-pc-windows-gnullvm.a.gz
+          cp "$out/src_binding.rs" target/src_binding_release_x86_64-pc-windows-gnullvm.rs
+          ls -l target/src_binding_release_x86_64-pc-windows-gnullvm.rs
+
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnullvm-prebuilt-release
+          path: |
+            target/librusty_v8_release_x86_64-pc-windows-gnullvm.a.gz
+            target/src_binding_release_x86_64-pc-windows-gnullvm.rs
+          retention-days: 7
 
   publish:
     needs: [build, build-windows-arm64, build-windows-arm64-simdutf]
