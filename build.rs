@@ -906,11 +906,12 @@ fn print_link_flags() {
     // librusty_v8.a is a static archive, so the Win32 import libs V8/abseil
     // reference via MSVC /DEFAULTLIB pragmas are NOT auto-linked by ld.lld in
     // mingw mode (it ignores those directives) -- list them explicitly. pthread
-    // is llvm-mingw's winpthreads shim used by V8's threading; c++abi backs the
-    // libc++ linked above (llvm-mingw keeps it separate) for exceptions/RTTI.
+    // is llvm-mingw's winpthreads shim used by V8's threading. (Do not link
+    // c++abi: llvm-mingw merges it into libc++.dll, so a separate libc++abi.a
+    // would duplicate symbols like std::out_of_range::~out_of_range().)
     for lib in [
-      "c++abi", "pthread", "bcrypt", "ws2_32", "advapi32", "dbghelp", "winmm",
-      "shlwapi", "psapi", "userenv", "version", "dnsapi",
+      "pthread", "bcrypt", "ws2_32", "advapi32", "dbghelp", "winmm", "shlwapi",
+      "psapi", "userenv", "version", "dnsapi",
     ] {
       println!("cargo:rustc-link-lib={lib}");
     }
