@@ -1,0 +1,13 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 72529db..b7f81b2 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -89,7 +89,7 @@ config("icu_code") {
+     "U_CHARSET_IS_UTF8=1",
+   ]
+ 
+-  if (is_win) {
++  if (is_msvc) {
+     # Disable some compiler warnings.
+     cflags += [
+       "/wd4005",  # Macro redefinition.

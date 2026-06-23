@@ -37,6 +37,7 @@ apply() {
 }
 
 apply build "001-add-mingw-toolchain.patch"
+apply third_party/icu "018-icu-msvc-cflags.patch"
 
 for p in \
   002-buildflags-fixes \
