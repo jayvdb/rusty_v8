@@ -1030,7 +1030,7 @@ index 2feb96c..e4c3acc 100644
      config_name = "${target_name}__config"
  
 diff --git a/config/win/visual_studio_version.gni b/config/win/visual_studio_version.gni
-index bd41166..65cd9a7 100644
+index bd41166..bc5b5a4 100644
 --- a/config/win/visual_studio_version.gni
 +++ b/config/win/visual_studio_version.gni
 @@ -24,7 +24,7 @@ declare_args() {
@@ -1051,6 +1051,16 @@ index bd41166..65cd9a7 100644
    assert(visual_studio_version != "",
           "You must set the visual_studio_version if you set the path")
    assert(windows_sdk_version != "",
+@@ -41,6 +41,9 @@ if (visual_studio_path == "") {
+   assert(wdk_path != "",
+          "You must set the wdk_path if you set the visual studio path")
+   visual_studio_runtime_dirs = []
++} else {
++  # mingw uses no MSVC runtime dirs, but win_toolchain_data.gni references this unconditionally.
++  visual_studio_runtime_dirs = []
+ }
+ 
+ visual_studio_version_logs = [ "windows_sdk_version=${windows_sdk_version}" ]
 diff --git a/toolchain/gcc_toolchain.gni b/toolchain/gcc_toolchain.gni
 index b9b5b0d..94ef9dd 100644
 --- a/toolchain/gcc_toolchain.gni
