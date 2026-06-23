@@ -1,5 +1,5 @@
 diff --git a/src/base/macros.h b/src/base/macros.h
-index 4355dec8..76842807 100644
+index 5510dd4fcb4..b7dded9b927 100644
 --- a/src/base/macros.h
 +++ b/src/base/macros.h
 @@ -242,7 +242,7 @@ V8_INLINE constexpr Dest bit_cast(Source const& source) noexcept {
@@ -11,3 +11,22 @@ index 4355dec8..76842807 100644
  // On Windows, also needs __declspec(guard(nocf)) for CFG.
  #define DISABLE_CFI_ICALL           \
    V8_CLANG_NO_SANITIZE("cfi-icall") \
+diff --git a/src/profiler/heap-snapshot-generator.cc b/src/profiler/heap-snapshot-generator.cc
+index 8edad48dcf1..d2641d7dd50 100644
+--- a/src/profiler/heap-snapshot-generator.cc
++++ b/src/profiler/heap-snapshot-generator.cc
+@@ -478,11 +478,11 @@ HeapSnapshot::HeapSnapshot(HeapProfiler* profiler,
+   static_assert(kSystemPointerSize != 4 || sizeof(HeapGraphEdge) == 12);
+   static_assert(kSystemPointerSize != 8 || sizeof(HeapGraphEdge) == 24);
+   static_assert(kSystemPointerSize != 4 || sizeof(HeapEntry) == 32);
+-#if V8_CC_MSVC
++#if V8_OS_WIN
+   static_assert(kSystemPointerSize != 8 || sizeof(HeapEntry) == 48);
+-#else   // !V8_CC_MSVC
++#else   // !V8_OS_WIN
+   static_assert(kSystemPointerSize != 8 || sizeof(HeapEntry) == 40);
+-#endif  // !V8_CC_MSVC
++#endif  // !V8_OS_WIN
+   memset(&gc_subroot_entries_, 0, sizeof(gc_subroot_entries_));
+ }
+ 
