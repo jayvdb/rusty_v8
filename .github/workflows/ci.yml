@@ -12,6 +12,8 @@ permissions: write-all
 
 jobs:
   build:
+    # Disabled on the gnullvm dev branch to save GHA minutes; the gnullvm job below is the only one we iterate on.
+    if: github.ref_name != 'more-win-targets'
     name: ${{ matrix.config.variant }} ${{ matrix.config.target }} ${{ matrix.config.v8_enable_pointer_compression && 'ptrcomp' || '' }} ${{ matrix.config.simdutf && 'simdutf' || '' }}
     runs-on: ${{ matrix.config.os }}
     timeout-minutes: 180
@@ -214,6 +216,7 @@ jobs:
           path: target/src_binding${{ env.FEATURES_SUFFIX }}_${{ matrix.config.variant }}_${{ matrix.config.target }}.rs
 
   build-windows-arm64:
+    if: github.ref_name != 'more-win-targets'
     name: release aarch64-pc-windows-msvc
     runs-on: ${{ github.repository == 'denoland/rusty_v8' && 'windows-2022-xxl' || 'windows-2022' }}
     timeout-minutes: 180
@@ -316,6 +319,7 @@ jobs:
           retention-days: 1
 
   build-windows-arm64-simdutf:
+    if: github.ref_name != 'more-win-targets'
     name: release aarch64-pc-windows-msvc simdutf
     runs-on: ${{ github.repository == 'denoland/rusty_v8' && 'windows-2022-xxl' || 'windows-2022' }}
     timeout-minutes: 180
@@ -409,6 +413,7 @@ jobs:
           path: target/src_binding_simdutf_release_aarch64-pc-windows-msvc.rs
 
   test-windows-arm64:
+    if: github.ref_name != 'more-win-targets'
     name: test aarch64-pc-windows-msvc
     needs: build-windows-arm64
     runs-on: ${{ github.repository == 'denoland/rusty_v8' && 'windows-11-arm-xl' || 'windows-11-arm' }}
@@ -450,9 +455,18 @@ jobs:
       LIB_EXT: a
       FEATURES_SUFFIX: ''
       TARGET: x86_64-pc-windows-gnullvm
+      # gn's BUILDCONFIG keys is_mingw on CXX==clang++/g++; without this the mingw toolchain is never selected.
+      # The mingw_toolchain template resolves bare clang/clang++/ar from PATH (the llvm-mingw bin added below).
+      CC: clang
+      CXX: clang++
     steps:
+      # autocrlf=false keeps the vendored V8 / chromium_build sources LF on the Windows runner so the LF-based
+      # mingw patches apply -- otherwise Git converts them to CRLF and every hunk's context mismatches.
       - name: Configure git
-        run: git config --global core.symlinks true
+        run: |
+          git config --global core.symlinks true
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       - name: Clone repository
         uses: actions/checkout@v4
