@@ -211,7 +211,7 @@ index 12595c1..5f586c2 100644
  
        if (filter_include(
 diff --git a/config/compiler/BUILD.gn b/config/compiler/BUILD.gn
-index 11ddb49..21c8a38 100644
+index 11ddb49..3464a0c 100644
 --- a/config/compiler/BUILD.gn
 +++ b/config/compiler/BUILD.gn
 @@ -371,14 +371,20 @@ config("compiler") {
@@ -269,6 +269,15 @@ index 11ddb49..21c8a38 100644
      cflags += [ "-fno-math-errno" ]
    }
  
+@@ -588,7 +594,7 @@ config("compiler") {
+   if (is_clang) {
+     # Flags for diagnostics.
+     cflags += [ "-fcolor-diagnostics" ]
+-    if (!is_win) {
++    if (!is_msvc) {
+       cflags += [ "-fdiagnostics-show-inlining-chain" ]
+     } else {
+       # Combine after https://github.com/llvm/llvm-project/pull/192241
 @@ -607,7 +613,7 @@ config("compiler") {
      cflags += [ "-fmerge-all-constants" ]
  
@@ -724,7 +733,7 @@ index b8a733f..8f455f8 100644
            "/Oy-",
            "/Ob0",
 diff --git a/config/sanitizers/sanitizers.gni b/config/sanitizers/sanitizers.gni
-index 04d86c5..a6e7003 100644
+index 04d86c5..6876c8f 100644
 --- a/config/sanitizers/sanitizers.gni
 +++ b/config/sanitizers/sanitizers.gni
 @@ -465,7 +465,7 @@ fuzzing_engine_add_configs =
@@ -736,6 +745,15 @@ index 04d86c5..a6e7003 100644
    if (is_mac || (is_ios && target_environment == "catalyst")) {
      if (is_asan) {
        clang_rt_dso_path = "darwin/libclang_rt.asan_osx_dynamic.dylib"
+@@ -531,7 +531,7 @@ template("ubsan_hardening") {
+       _condition = invoker.condition
+     }
+ 
+-    if (_condition && !is_ubsan && is_clang) {
++    if (_condition && !is_ubsan && is_clang && !is_mingw) {
+       cflags = [
+         "-fsanitize=${invoker.sanitizer}",
+         "-fsanitize-trap=${invoker.sanitizer}",
 diff --git a/config/win/BUILD.gn b/config/win/BUILD.gn
 index 1690897..55a18c8 100644
 --- a/config/win/BUILD.gn
