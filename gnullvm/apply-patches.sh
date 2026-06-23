@@ -54,8 +54,7 @@ for p in \
   012-remove-dllimport-attributes \
   013-builtin-deps-fixes \
   014-heap-use-proper-sources \
-  017-highway-disable-avx10-on-mingw \
-  021-v8-win-libs-mingw; do
+  017-highway-disable-avx10-on-mingw; do
   apply v8 "$p.patch"
 done
 
