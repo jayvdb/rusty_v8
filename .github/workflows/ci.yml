@@ -524,18 +524,39 @@ jobs:
 
       # GN_ARGS mirrors the MSYS2 mingw-w64-v8 recipe but uses lld (llvm-mingw ships it) and points clang_base_path
       # at the llvm-mingw root. build.rs appends GN_ARGS verbatim after its own args, so these override. PRINT_GN_ARGS
-      # echoes the final resolved arg set for debugging. Forward slashes are valid in gn paths on Windows.
-      - name: Build
+      # echoes the final resolved arg set for debugging. symbol_level=0 + libcxx_natvis_include=false drop the MSVC
+      # debug-info linker flags (/DEBUG, /pdbaltpath, /NATVIS, /Zi) the GNU-driver clang rejects. Written to
+      # GITHUB_ENV (not a single step) so Build AND Test see identical build env -- otherwise the Test step re-runs
+      # build.rs/gn with different args and the gn invocation fails.
+      - name: Configure gnullvm build env
         shell: bash
-        env:
-          PRINT_GN_ARGS: true
-          CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER: x86_64-w64-mingw32-clang
         run: |
           root="$(cygpath -m "$LLVM_MINGW_ROOT")"
-          # symbol_level=0 + libcxx_natvis_include=false drop the MSVC debug-info linker flags (/DEBUG, /pdbaltpath,
-          # /NATVIS, /Zi) that the GNU-driver clang rejects; matches MSYS2's release build.
-          export GN_ARGS="is_clang=true clang_base_path=\"$root\" use_lld=true use_custom_libcxx=false use_sysroot=false symbol_level=0 libcxx_natvis_include=false treat_warnings_as_errors=false v8_enable_etw_stack_walking=false v8_enable_system_instrumentation=false v8_enable_temporal_support=false v8_enable_verify_heap=false v8_enable_partition_alloc=false v8_use_external_startup_data=false"
-          cargo build -vv --locked --target x86_64-pc-windows-gnullvm --release
+          {
+            echo "GN_ARGS=is_clang=true clang_base_path=\"$root\" use_lld=true use_custom_libcxx=false use_sysroot=false symbol_level=0 libcxx_natvis_include=false treat_warnings_as_errors=false v8_enable_etw_stack_walking=false v8_enable_system_instrumentation=false v8_enable_temporal_support=false v8_enable_verify_heap=false v8_enable_partition_alloc=false v8_use_external_startup_data=false"
+            echo "PRINT_GN_ARGS=true"
+            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER=x86_64-w64-mingw32-clang"
+          } >> "$GITHUB_ENV"
+
+      - name: Build
+        shell: bash
+        run: cargo build -vv --locked --target x86_64-pc-windows-gnullvm --release
+
+      # The test .exes link llvm-mingw's libc++/libunwind/libwinpthread dynamically; Windows resolves DLLs from the
+      # exe's own dir before PATH, so stage them next to the test binaries to avoid a cryptic STATUS_DLL_NOT_FOUND
+      # (0xc0000135) at run time. Also dumps what got staged + the runtime DLLs llvm-mingw ships, for diagnosis.
+      - name: Stage llvm-mingw runtime DLLs next to test binaries
+        shell: bash
+        run: |
+          root="$(cygpath -u "$LLVM_MINGW_ROOT")"
+          deps="target/x86_64-pc-windows-gnullvm/release/deps"
+          mkdir -p "$deps"
+          echo "== runtime DLLs available in llvm-mingw =="
+          find "$root" -name 'libc++.dll' -o -name 'libunwind.dll' -o -name 'libwinpthread-1.dll'
+          find "$root" \( -name 'libc++.dll' -o -name 'libunwind.dll' -o -name 'libwinpthread-1.dll' \) \
+            -exec cp -v {} "$deps"/ \;
+          echo "== staged into $deps =="
+          ls -l "$deps"/*.dll || echo "(none staged -- check find paths above)"
 
       - name: Test
         shell: bash

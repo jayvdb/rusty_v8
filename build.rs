@@ -903,9 +903,17 @@ fn print_link_flags() {
     // GNU (GCC) mingw toolchains keep atomics in a separate library.
     println!("cargo:rustc-link-lib=atomic");
   } else if target.ends_with("windows-gnullvm") {
-    // llvm-mingw builds V8 against Win32 threads via a pthread shim that must
-    // be linked explicitly.
-    println!("cargo:rustc-link-lib=pthread");
+    // librusty_v8.a is a static archive, so the Win32 import libs V8/abseil
+    // reference via MSVC /DEFAULTLIB pragmas are NOT auto-linked by ld.lld in
+    // mingw mode (it ignores those directives) -- list them explicitly. pthread
+    // is llvm-mingw's winpthreads shim used by V8's threading; c++abi backs the
+    // libc++ linked above (llvm-mingw keeps it separate) for exceptions/RTTI.
+    for lib in [
+      "c++abi", "pthread", "bcrypt", "ws2_32", "advapi32", "dbghelp", "winmm",
+      "shlwapi", "psapi", "userenv", "version", "dnsapi",
+    ] {
+      println!("cargo:rustc-link-lib={lib}");
+    }
   }
 }
 
