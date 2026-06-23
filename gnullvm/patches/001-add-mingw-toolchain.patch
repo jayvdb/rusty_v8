@@ -1,5 +1,5 @@
 diff --git a/config/BUILD.gn b/config/BUILD.gn
-index 72ccd08..9e0b13d 100644
+index 72ccd08..3069f88 100644
 --- a/config/BUILD.gn
 +++ b/config/BUILD.gn
 @@ -157,25 +157,25 @@ config("default_libs") {
@@ -47,7 +47,7 @@ index 72ccd08..9e0b13d 100644
  
        # Please don't add more stuff here. We should actually be making this
        # list smaller, since all common things should be covered. If you need
-@@ -191,9 +191,9 @@ config("default_libs") {
+@@ -191,11 +191,15 @@ config("default_libs") {
      } else {
        # These libraries are not compatible with Windows UWP (i.e. store apps.)
        libs += [
@@ -59,8 +59,14 @@ index 72ccd08..9e0b13d 100644
 +        "ole32",
        ]
      }
++    if (is_mingw) {
++      # winpthreads provides the pthread_* symbols abseil/V8 base reference on mingw.
++      libs += [ "pthread" ]
++    }
    } else if (is_android) {
-@@ -249,7 +249,7 @@ group("common_deps_without_libcxx") {
+     libs = [
+       "dl",
+@@ -249,7 +253,7 @@ group("common_deps_without_libcxx") {
      }
    }
  
@@ -69,7 +75,7 @@ index 72ccd08..9e0b13d 100644
      if (build_with_chromium && is_component_build) {
        # To enable allocator_shim for the windows component built chrome,
        # need to make all shared libraries and also executable(i.e.chrome.exe)
-@@ -401,7 +401,7 @@ config("shared_library_config") {
+@@ -401,7 +405,7 @@ config("shared_library_config") {
  # Recommend precompiled headers for targets with more than 50 .cc files.
  config("precompiled_headers") {
    if (enable_precompiled_headers) {
@@ -78,7 +84,7 @@ index 72ccd08..9e0b13d 100644
        # This is a string rather than a file GN knows about. It has to match
        # exactly what's in the /FI flag below, and what might appear in the
        # source code in quotes for an #include directive.
-@@ -414,7 +414,7 @@ config("precompiled_headers") {
+@@ -414,7 +418,7 @@ config("precompiled_headers") {
  
        # Force include the header.
        cflags = [ "/FI$precompiled_header" ]
