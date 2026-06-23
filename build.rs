@@ -212,6 +212,20 @@ fn build_binding() {
         clang_args.push(format!("-isystem{}/include", resource_dir.trim()));
       }
     }
+  } else if target_os == "windows"
+    && env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu")
+  {
+    // gnullvm/mingw: libclang rejects the `gnullvm` triple version, so pass the
+    // GNU Windows triple instead, and add llvm-mingw's clang resource dir so the
+    // builtin intrinsics headers (mm_malloc.h, etc.) that <malloc.h> pulls in are
+    // found.
+    clang_args.push("--target=x86_64-w64-windows-gnu".to_string());
+    if let Ok(output) =
+      Command::new("clang").arg("-print-resource-dir").output()
+    {
+      let resource_dir = String::from_utf8(output.stdout).unwrap();
+      clang_args.push(format!("-isystem{}/include", resource_dir.trim()));
+    }
   }
 
   let bindings = bindgen::Builder::default()
