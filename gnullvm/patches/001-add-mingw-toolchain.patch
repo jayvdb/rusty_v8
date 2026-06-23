@@ -1252,6 +1252,93 @@ index 99f4809..ad0eac7 100644
 +    }
 +  }
 +}
+diff --git a/toolchain/win/win_toolchain_data.gni b/toolchain/win/win_toolchain_data.gni
+index a6e8328..d05b4c6 100644
+--- a/toolchain/win/win_toolchain_data.gni
++++ b/toolchain/win/win_toolchain_data.gni
+@@ -5,40 +5,56 @@
+ import("//build/config/win/visual_studio_version.gni")
+ 
+ declare_args() {
+-  win_toolchain_data_x86 =
+-      exec_script("//build/toolchain/win/setup_toolchain.py",
+-                  [
+-                    visual_studio_path,
+-                    windows_sdk_path,
+-                    visual_studio_runtime_dirs,
+-                    "win",
+-                    "x86",
+-                    "environment.x86",
+-                  ],
+-                  "scope")
++  # mingw (llvm-mingw/clang) does not use the MSVC toolchain, and running
++  # setup_toolchain.py with the empty visual_studio_path mingw leaves unset makes
++  # gn drop the empty CLI args, so the script aborts with a usage error. Skip it
++  # entirely for mingw -- the msvc_toolchain targets that read these scopes are
++  # never the default toolchain on a mingw build, so empty scopes are never read.
++  if (is_mingw) {
++    win_toolchain_data_x86 = {
++    }
++    win_toolchain_data_x64 = {
++    }
++    if (target_cpu == "arm64" || host_cpu == "arm64") {
++      win_toolchain_data_arm64 = {
++      }
++    }
++  } else {
++    win_toolchain_data_x86 =
++        exec_script("//build/toolchain/win/setup_toolchain.py",
++                    [
++                      visual_studio_path,
++                      windows_sdk_path,
++                      visual_studio_runtime_dirs,
++                      "win",
++                      "x86",
++                      "environment.x86",
++                    ],
++                    "scope")
+ 
+-  win_toolchain_data_x64 =
+-      exec_script("//build/toolchain/win/setup_toolchain.py",
+-                  [
+-                    visual_studio_path,
+-                    windows_sdk_path,
+-                    visual_studio_runtime_dirs,
+-                    "win",
+-                    "x64",
+-                    "environment.x64",
+-                  ],
+-                  "scope")
+-  if (target_cpu == "arm64" || host_cpu == "arm64") {
+-    win_toolchain_data_arm64 =
++    win_toolchain_data_x64 =
+         exec_script("//build/toolchain/win/setup_toolchain.py",
+                     [
+                       visual_studio_path,
+                       windows_sdk_path,
+                       visual_studio_runtime_dirs,
+                       "win",
+-                      "arm64",
+-                      "environment.arm64",
++                      "x64",
++                      "environment.x64",
+                     ],
+                     "scope")
++    if (target_cpu == "arm64" || host_cpu == "arm64") {
++      win_toolchain_data_arm64 =
++          exec_script("//build/toolchain/win/setup_toolchain.py",
++                      [
++                        visual_studio_path,
++                        windows_sdk_path,
++                        visual_studio_runtime_dirs,
++                        "win",
++                        "arm64",
++                        "environment.arm64",
++                      ],
++                      "scope")
++    }
+   }
+ }
 diff --git a/util/lastchange.py b/util/lastchange.py
 index e5927f5..db4aebb 100755
 --- a/util/lastchange.py
