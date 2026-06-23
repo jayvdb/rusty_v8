@@ -212,6 +212,20 @@ fn build_binding() {
         clang_args.push(format!("-isystem{}/include", resource_dir.trim()));
       }
     }
+  } else if target_os == "windows"
+    && env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu")
+  {
+    // gnullvm/mingw: libclang rejects the `gnullvm` triple version, so pass the
+    // GNU Windows triple instead, and add llvm-mingw's clang resource dir so the
+    // builtin intrinsics headers (mm_malloc.h, etc.) that <malloc.h> pulls in are
+    // found.
+    clang_args.push("--target=x86_64-w64-windows-gnu".to_string());
+    if let Ok(output) =
+      Command::new("clang").arg("-print-resource-dir").output()
+    {
+      let resource_dir = String::from_utf8(output.stdout).unwrap();
+      clang_args.push(format!("-isystem{}/include", resource_dir.trim()));
+    }
   }
 
   let bindings = bindgen::Builder::default()
@@ -576,7 +590,10 @@ fn prebuilt_features_suffix() -> String {
 
 fn static_lib_name(suffix: &str) -> String {
   let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
-  if target_os == "windows" {
+  let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap();
+  // Only MSVC uses the `rusty_v8.lib` naming; GNU/Clang Windows toolchains
+  // (windows-gnu / windows-gnullvm) follow the Unix `librusty_v8.a` convention.
+  if target_os == "windows" && target_env == "msvc" {
     format!("rusty_v8{suffix}.lib")
   } else {
     format!("librusty_v8{suffix}.a")
@@ -847,7 +864,9 @@ fn print_link_flags() {
       } else if target.contains("apple")
         || target.contains("freebsd")
         || target.contains("openbsd")
+        || target.contains("gnullvm")
       {
+        // windows-gnullvm uses the Clang/llvm-mingw libc++ as its C++ stdlib.
         println!("cargo:rustc-link-lib=dylib=c++");
       } else if target.contains("android") {
         println!("cargo:rustc-link-lib=dylib=c++_shared");
@@ -856,6 +875,7 @@ fn print_link_flags() {
       }
     }
   }
+  let target = env::var("TARGET").unwrap();
   let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
   let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap();
 
@@ -874,6 +894,22 @@ fn print_link_flags() {
       println!("cargo:rustc-link-lib=libcpmt");
     } else {
       println!("cargo:rustc-link-lib=dylib=msvcprt");
+    }
+  } else if target.ends_with("windows-gnu") {
+    // GNU (GCC) mingw toolchains keep atomics in a separate library.
+    println!("cargo:rustc-link-lib=atomic");
+  } else if target.ends_with("windows-gnullvm") {
+    // librusty_v8.a is a static archive, so the Win32 import libs V8/abseil
+    // reference via MSVC /DEFAULTLIB pragmas are NOT auto-linked by ld.lld in
+    // mingw mode (it ignores those directives) -- list them explicitly. pthread
+    // is llvm-mingw's winpthreads shim used by V8's threading. (Do not link
+    // c++abi: llvm-mingw merges it into libc++.dll, so a separate libc++abi.a
+    // would duplicate symbols like std::out_of_range::~out_of_range().)
+    for lib in [
+      "pthread", "bcrypt", "ws2_32", "advapi32", "dbghelp", "winmm", "shlwapi",
+      "psapi", "userenv", "version", "dnsapi",
+    ] {
+      println!("cargo:rustc-link-lib={lib}");
     }
   }
 }
