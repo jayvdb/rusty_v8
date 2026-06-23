@@ -211,7 +211,7 @@ index 12595c1..5f586c2 100644
  
        if (filter_include(
 diff --git a/config/compiler/BUILD.gn b/config/compiler/BUILD.gn
-index 11ddb49..3464a0c 100644
+index 11ddb49..e48f30b 100644
 --- a/config/compiler/BUILD.gn
 +++ b/config/compiler/BUILD.gn
 @@ -371,14 +371,20 @@ config("compiler") {
@@ -269,16 +269,20 @@ index 11ddb49..3464a0c 100644
      cflags += [ "-fno-math-errno" ]
    }
  
-@@ -588,7 +594,7 @@ config("compiler") {
+@@ -588,10 +594,9 @@ config("compiler") {
    if (is_clang) {
      # Flags for diagnostics.
      cflags += [ "-fcolor-diagnostics" ]
 -    if (!is_win) {
-+    if (!is_msvc) {
++    if (!is_msvc && !is_mingw) {
        cflags += [ "-fdiagnostics-show-inlining-chain" ]
-     } else {
-       # Combine after https://github.com/llvm/llvm-project/pull/192241
-@@ -607,7 +613,7 @@ config("compiler") {
+-    } else {
+-      # Combine after https://github.com/llvm/llvm-project/pull/192241
++    } else if (is_msvc) {
+       cflags += [ "/clang:-fdiagnostics-show-inlining-chain" ]
+     }
+     if (diagnostics_print_source_range_info && !is_win) {
+@@ -607,7 +612,7 @@ config("compiler") {
      cflags += [ "-fmerge-all-constants" ]
  
      if (!use_sized_deallocation) {
@@ -287,7 +291,7 @@ index 11ddb49..3464a0c 100644
          cflags += [ "/Zc:sizedDealloc-" ]
        } else {
          cflags += [ "-fno-sized-deallocation" ]
-@@ -615,7 +621,7 @@ config("compiler") {
+@@ -615,7 +620,7 @@ config("compiler") {
      }
    }
  
@@ -296,7 +300,7 @@ index 11ddb49..3464a0c 100644
      cflags += [ "-fcrash-diagnostics-dir=" + clang_diagnostic_dir ]
      if (save_reproducers_on_lld_crash && use_lld) {
        ldflags += [
-@@ -679,7 +685,7 @@ config("compiler") {
+@@ -679,7 +684,7 @@ config("compiler") {
  
    # C11/C++11 compiler flags setup.
    # ---------------------------
@@ -305,7 +309,7 @@ index 11ddb49..3464a0c 100644
      if (is_clang) {
        standard_prefix = "c"
  
-@@ -702,7 +708,7 @@ config("compiler") {
+@@ -702,7 +707,7 @@ config("compiler") {
      } else {
        cflags_cc += [ "-std=${standard_prefix}++20" ]
      }
@@ -314,7 +318,7 @@ index 11ddb49..3464a0c 100644
      cflags_c += [ "/std:c11" ]
      if (use_cxx23) {
        cflags_cc += [ "/std:c++23preview" ]
-@@ -911,7 +917,7 @@ config("compiler") {
+@@ -911,7 +916,7 @@ config("compiler") {
        if (use_lld && is_mac) {
          ldflags += [ "-Wl,--time-trace" ]
        }
@@ -323,7 +327,7 @@ index 11ddb49..3464a0c 100644
        cflags += [
          # "Documented" here:
          # http://aras-p.info/blog/2017/10/23/Best-unknown-MSVC-flag-d2cgsummary/
-@@ -921,7 +927,7 @@ config("compiler") {
+@@ -921,7 +926,7 @@ config("compiler") {
    }
  
    if (is_clang && show_includes) {
@@ -332,7 +336,7 @@ index 11ddb49..3464a0c 100644
        cflags += [
          "/clang:-H",
          "/clang:-fshow-skipped-includes",
-@@ -937,7 +943,7 @@ config("compiler") {
+@@ -937,7 +942,7 @@ config("compiler") {
    # This flag enforces that member pointer base types are complete. It helps
    # prevent us from running into problems in the Microsoft C++ ABI (see
    # https://crbug.com/847724).
@@ -341,7 +345,7 @@ index 11ddb49..3464a0c 100644
      cflags += [ "-fcomplete-member-pointers" ]
    }
  
-@@ -1133,7 +1139,7 @@ config("linker") {
+@@ -1133,7 +1138,7 @@ config("linker") {
      }
    }
  
@@ -350,7 +354,7 @@ index 11ddb49..3464a0c 100644
      # TODO(thakis): Make the driver pass --color-diagnostics to the linker
      # if -fcolor-diagnostics is passed to it, and pass -fcolor-diagnostics
      # in ldflags instead.
-@@ -1183,7 +1189,7 @@ config("linker") {
+@@ -1183,7 +1188,7 @@ config("linker") {
    # present. On Android this increases binary size due to more thinks for long
    # jumps. Turn it off by default and enable selectively for targets where it's
    # beneficial.
@@ -359,7 +363,7 @@ index 11ddb49..3464a0c 100644
      if (is_win) {
        ldflags += [ "/call-graph-profile-sort:no" ]
      } else if (!is_wasm) {
-@@ -1383,7 +1389,7 @@ config("compiler_deterministic") {
+@@ -1383,7 +1388,7 @@ config("compiler_deterministic") {
    # Eliminate build metadata (__DATE__, __TIME__ and __TIMESTAMP__) for
    # deterministic build.  See https://crbug.com/314403
    if (!is_official_build) {
@@ -368,7 +372,7 @@ index 11ddb49..3464a0c 100644
        cflags += [
          "/wd4117",  # Trying to define or undefine a predefined macro.
          "/D__DATE__=",
-@@ -1423,7 +1429,7 @@ config("compiler_deterministic") {
+@@ -1423,7 +1428,7 @@ config("compiler_deterministic") {
        asmflags = [ "-Wa,-fdebug-compilation-dir,." ]
      }
  
@@ -377,7 +381,7 @@ index 11ddb49..3464a0c 100644
        if (symbol_level == 2 || (is_clang && using_sanitizer)) {
          # Absolutize source file paths for PDB. Pass the real build directory
          # if the pdb contains source-level debug information and if linker
-@@ -1471,7 +1477,7 @@ config("compiler_deterministic") {
+@@ -1471,7 +1476,7 @@ config("compiler_deterministic") {
  
  config("clang_revision") {
    if (is_clang && clang_base_path == default_clang_base_path &&
@@ -386,7 +390,7 @@ index 11ddb49..3464a0c 100644
      _perform_consistency_checks = current_toolchain == default_toolchain
      if (llvm_force_head_revision) {
        _head_revision_stamp_path = "//third_party/llvm-build/force_head_revision"
-@@ -1696,7 +1702,7 @@ config("runtime_library") {
+@@ -1696,7 +1701,7 @@ config("runtime_library") {
    # can be replaced by the C++ symbols. This config ensures the C++ symbols
    # exist and are strong in order to cause that replacement to occur by
    # explicitly linking in clang's compiler-rt library.
@@ -395,7 +399,7 @@ index 11ddb49..3464a0c 100644
      configs += [ "//build/config/clang:compiler_builtins" ]
    }
  
-@@ -1762,7 +1768,7 @@ config("runtime_library") {
+@@ -1762,7 +1767,7 @@ config("runtime_library") {
  # is broken out separately so nocompile tests can force-enable this setting
  # independently of the default warning flags.
  config("treat_warnings_as_errors") {
@@ -404,7 +408,7 @@ index 11ddb49..3464a0c 100644
      cflags = [ "/WX" ]
    } else {
      cflags = [ "-Werror" ]
-@@ -1814,7 +1820,7 @@ config("default_warnings") {
+@@ -1814,7 +1819,7 @@ config("default_warnings") {
    ldflags = []
    configs = []
  
@@ -413,7 +417,7 @@ index 11ddb49..3464a0c 100644
      if (fatal_linker_warnings) {
        arflags = [ "/WX" ]
        ldflags = [ "/WX" ]
-@@ -1890,10 +1896,33 @@ config("default_warnings") {
+@@ -1890,10 +1895,33 @@ config("default_warnings") {
        # files.
        cflags += [ "-Wno-packed-not-aligned" ]
      }
@@ -448,7 +452,7 @@ index 11ddb49..3464a0c 100644
      cflags += [
        # Disables.
        "-Wno-missing-field-initializers",  # "struct foo f = {0};"
-@@ -2086,7 +2115,7 @@ config("prevent_unsafe_narrowing") {
+@@ -2086,7 +2114,7 @@ config("prevent_unsafe_narrowing") {
  # part of Chromium.
  
  config("chromium_code") {
@@ -457,7 +461,7 @@ index 11ddb49..3464a0c 100644
      if (is_clang) {
        cflags = [ "/W4" ]  # Warning level 4.
  
-@@ -2149,7 +2178,7 @@ config("chromium_code") {
+@@ -2149,7 +2177,7 @@ config("chromium_code") {
      }
    }
  
@@ -466,7 +470,7 @@ index 11ddb49..3464a0c 100644
      cflags += [
        # Warn on missing break statements at the end of switch cases.
        # For intentional fallthrough, use [[fallthrough]].
-@@ -2202,7 +2231,7 @@ config("no_chromium_code") {
+@@ -2202,7 +2230,7 @@ config("no_chromium_code") {
    cflags_cc = []
    defines = []
  
@@ -475,7 +479,7 @@ index 11ddb49..3464a0c 100644
      if (is_clang) {
        cflags += [ "/W3" ]  # Warning level 3.
      }
-@@ -2257,7 +2286,7 @@ config("noshadowing") {
+@@ -2257,7 +2285,7 @@ config("noshadowing") {
  # Allows turning Run-Time Type Identification on or off.
  
  config("rtti") {
@@ -484,7 +488,7 @@ index 11ddb49..3464a0c 100644
      cflags_cc = [ "/GR" ]
    } else {
      cflags_cc = [ "-frtti" ]
-@@ -2267,7 +2296,7 @@ config("rtti") {
+@@ -2267,7 +2295,7 @@ config("rtti") {
  config("no_rtti") {
    # Some sanitizer configs may require RTTI to be left enabled globally
    if (!use_rtti) {
@@ -493,7 +497,7 @@ index 11ddb49..3464a0c 100644
        cflags_cc = [ "/GR-" ]
      } else {
        cflags_cc = [ "-fno-rtti" ]
-@@ -2320,7 +2349,7 @@ config("thin_archive") {
+@@ -2320,7 +2348,7 @@ config("thin_archive") {
        "-T",
        "-S",
      ]
@@ -502,7 +506,7 @@ index 11ddb49..3464a0c 100644
      arflags = [ "/llvmlibthin" ]
    }
  }
-@@ -2331,7 +2360,7 @@ config("thin_archive") {
+@@ -2331,7 +2359,7 @@ config("thin_archive") {
  # Note: exceptions are disallowed in Google code.
  
  config("exceptions") {
@@ -511,7 +515,7 @@ index 11ddb49..3464a0c 100644
      # Enables exceptions in the STL.
      if (!use_custom_libcxx) {
        defines = [ "_HAS_EXCEPTIONS=1" ]
-@@ -2344,7 +2373,7 @@ config("exceptions") {
+@@ -2344,7 +2372,7 @@ config("exceptions") {
  }
  
  config("no_exceptions") {
@@ -520,7 +524,7 @@ index 11ddb49..3464a0c 100644
      # Disables exceptions in the STL.
      # libc++ uses the __has_feature macro to control whether to use exceptions,
      # so defining this macro is unnecessary. Defining _HAS_EXCEPTIONS to 0 also
-@@ -2354,7 +2383,9 @@ config("no_exceptions") {
+@@ -2354,7 +2382,9 @@ config("no_exceptions") {
      if (!use_custom_libcxx) {
        defines = [ "_HAS_EXCEPTIONS=0" ]
      }
@@ -531,7 +535,7 @@ index 11ddb49..3464a0c 100644
      cflags_cc = [ "-fno-exceptions" ]
      cflags_objcc = cflags_cc
    }
-@@ -2429,7 +2460,7 @@ config("no_incompatible_pointer_warnings") {
+@@ -2429,7 +2459,7 @@ config("no_incompatible_pointer_warnings") {
  
  # Shared settings for both "optimize" and "optimize_max" configs.
  # IMPORTANT: On Windows "/O1" and "/O2" must go before the common flags.
@@ -540,7 +544,7 @@ index 11ddb49..3464a0c 100644
    common_optimize_on_cflags = [
      "/Oy-",  # Disable omitting frame pointers, must be after /O2.
      "/Zc:inline",  # Remove unreferenced COMDAT (faster links).
-@@ -2565,7 +2596,7 @@ config("default_stack_frames") {
+@@ -2565,7 +2595,7 @@ config("default_stack_frames") {
  # [1]: https://pinpoint-dot-chromeperf.appspot.com/job/132bc772be0000
  # [2]: https://crrev.com/c/5447532
  config("optimize") {
@@ -549,7 +553,7 @@ index 11ddb49..3464a0c 100644
      # clang-cl's /O2 corresponds to clang's -O3, and really want -O2 for
      # consistency with the other platforms.
      cflags = [
-@@ -2589,7 +2620,7 @@ config("optimize") {
+@@ -2589,7 +2619,7 @@ config("optimize") {
      }
  
      if (is_clang && use_ml_inliner && is_a_target_toolchain && !is_chromeos &&
@@ -558,7 +562,7 @@ index 11ddb49..3464a0c 100644
        cflags += [
          "-mllvm",
          "-enable-ml-inliner=release",
-@@ -2614,7 +2645,7 @@ config("optimize") {
+@@ -2614,7 +2644,7 @@ config("optimize") {
  
  # Turn off optimizations.
  config("no_optimize") {
@@ -567,7 +571,7 @@ index 11ddb49..3464a0c 100644
      cflags = [
        "/Od",  # Disable optimization.
        "/Ob0",  # Disable all inlining (on by default).
-@@ -2650,7 +2681,7 @@ config("no_optimize") {
+@@ -2650,7 +2680,7 @@ config("no_optimize") {
  # elsewhere.
  config("optimize_max") {
    ldflags = common_optimize_on_ldflags
@@ -576,7 +580,7 @@ index 11ddb49..3464a0c 100644
      # Favor speed over size, /O2 must be before the common flags.
      # /O2 implies /Ot, /Oi, and /GF.
      cflags = [ "/O2" ] + common_optimize_on_cflags
-@@ -2671,7 +2702,7 @@ config("optimize_max") {
+@@ -2671,7 +2701,7 @@ config("optimize_max") {
  # so that we don't need this disclaimer.
  config("optimize_speed") {
    ldflags = common_optimize_on_ldflags
@@ -585,7 +589,7 @@ index 11ddb49..3464a0c 100644
      # Favor speed over size, /O2 must be before the common flags.
      # /O2 implies /Ot, /Oi, and /GF.
      cflags = [ "/O2" ] + common_optimize_on_cflags
-@@ -2713,7 +2744,7 @@ config("default_optimization") {
+@@ -2713,7 +2743,7 @@ config("default_optimization") {
  }
  
  _clang_sample_profile = ""
@@ -594,7 +598,7 @@ index 11ddb49..3464a0c 100644
    if (clang_sample_profile_path != "") {
      _clang_sample_profile = clang_sample_profile_path
    } else if (clang_use_default_sample_profile) {
-@@ -2838,7 +2869,7 @@ config("split_dwarf") {
+@@ -2838,7 +2868,7 @@ config("split_dwarf") {
  config("symbols") {
    rustflags = []
    configs = []
@@ -603,7 +607,7 @@ index 11ddb49..3464a0c 100644
      if (is_clang) {
        cflags = [
          # Debug information in the .obj files.
-@@ -2889,7 +2920,7 @@ config("symbols") {
+@@ -2889,7 +2919,7 @@ config("symbols") {
  
      # On aix -gdwarf causes linker failures due to thread_local variables.
      # On zos -gdwarf causes INSUFFICIENT ABOVE THE LINE STORAGE WAS AVAILABLE.
@@ -612,7 +616,7 @@ index 11ddb49..3464a0c 100644
        if (use_dwarf5) {
          cflags += [ "-gdwarf-5" ]
          rustflags += [ "-Zdwarf-version=5" ]
-@@ -2959,7 +2990,7 @@ config("symbols") {
+@@ -2959,7 +2989,7 @@ config("symbols") {
      configs += [ "//build/config:compress_debug_sections" ]
    }
  
@@ -621,7 +625,7 @@ index 11ddb49..3464a0c 100644
      # Remove unreferenced methods to reduce type info in symbols.
      # See: https://github.com/llvm/llvm-project/pull/87018.
      # The downside with this flag is precisely that: Unreferenced methods get
-@@ -2972,7 +3003,7 @@ config("symbols") {
+@@ -2972,7 +3002,7 @@ config("symbols") {
      cflags += [ "-gomit-unreferenced-methods" ]
    }
  
@@ -630,7 +634,7 @@ index 11ddb49..3464a0c 100644
      if (is_apple) {
        # TODO(crbug.com/40117949): Investigate missing debug info on mac.
        # Make sure we don't use constructor homing on mac.
-@@ -3033,7 +3064,7 @@ config("minimal_symbols") {
+@@ -3033,7 +3063,7 @@ config("minimal_symbols") {
        # TODO(thakis): Remove this once mac_deployment_target is 10.11.
        cflags += [ "-gdwarf-4" ]
        rustflags += [ "-Zdwarf-version=4" ]
@@ -639,7 +643,7 @@ index 11ddb49..3464a0c 100644
        # On aix -gdwarf causes linker failures due to thread_local variables.
        # Recent clang versions default to DWARF5 on Linux, and Android is about
        # to switch. TODO: Adopt that in controlled way.
-@@ -3089,7 +3120,7 @@ config("minimal_symbols") {
+@@ -3089,7 +3119,7 @@ config("minimal_symbols") {
  # told to not generate debug information and the linker then just puts function
  # names in the final debug information.
  config("no_symbols") {
@@ -648,7 +652,7 @@ index 11ddb49..3464a0c 100644
      ldflags = [ "/DEBUG" ]
  
      # All configs using /DEBUG should include this:
-@@ -3216,7 +3247,7 @@ buildflag_header("compiler_buildflags") {
+@@ -3216,7 +3246,7 @@ buildflag_header("compiler_buildflags") {
  }
  
  config("cet_shadow_stack") {
