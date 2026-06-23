@@ -39,6 +39,7 @@ apply() {
 apply build "001-add-mingw-toolchain.patch"
 apply third_party/icu "018-icu-msvc-cflags.patch"
 apply tools/win "019-natvis-msvc-only.patch"
+apply third_party/abseil-cpp "020-abseil-bcrypt-mingw.patch"
 
 for p in \
   002-buildflags-fixes \
@@ -53,7 +54,8 @@ for p in \
   012-remove-dllimport-attributes \
   013-builtin-deps-fixes \
   014-heap-use-proper-sources \
-  017-highway-disable-avx10-on-mingw; do
+  017-highway-disable-avx10-on-mingw \
+  021-v8-win-libs-mingw; do
   apply v8 "$p.patch"
 done
 
