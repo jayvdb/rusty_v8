@@ -453,7 +453,9 @@ jobs:
       V8_FROM_SOURCE: true
       LIB_NAME: librusty_v8
       LIB_EXT: a
-      FEATURES_SUFFIX: ''
+      # deno_core (the downstream consumer) always enables v8's simdutf feature, so the prebuilt must be the
+      # simdutf variant -- otherwise build.rs requests librusty_v8_simdutf_... and the non-simdutf asset 404s.
+      FEATURES_SUFFIX: _simdutf
       TARGET: x86_64-pc-windows-gnullvm
       # gn's BUILDCONFIG keys is_mingw on CXX==clang++/g++; without this the mingw toolchain is never selected.
       # The mingw_toolchain template resolves bare clang/clang++/ar from PATH (the llvm-mingw bin added below).
@@ -540,7 +542,7 @@ jobs:
 
       - name: Build
         shell: bash
-        run: cargo build -vv --locked --target x86_64-pc-windows-gnullvm --release
+        run: cargo build -vv --locked --target x86_64-pc-windows-gnullvm --release --features simdutf
 
       # The test .exes link llvm-mingw's libc++/libunwind/libwinpthread dynamically; Windows resolves DLLs from the
       # exe's own dir before PATH, so stage them next to the test binaries to avoid a cryptic STATUS_DLL_NOT_FOUND
@@ -573,7 +575,7 @@ jobs:
           skip="$skip | test(prepare_stack_trace_callback) | test(static_source_phase_import) | test(synthetic_module)"
           skip="$skip | test(shared_ptr_use_count_assertion_failed) | test(shared_ref_use_count_assertion_failed)"
           cargo nextest run -v --all-targets --locked --target x86_64-pc-windows-gnullvm --release \
-            --no-fail-fast -E "not ($skip)"
+            --features simdutf --no-fail-fast -E "not ($skip)"
 
       - name: Prepare binary publish
         if: ${{ !cancelled() }}
