@@ -1,12 +1,12 @@
 --- a/src/heap/base/asm/x64/push_registers_asm.cc	2026-03-20 22:50:53
 +++ b/src/heap/base/asm/x64/push_registers_asm.cc	2026-04-09 17:49:23
-@@ -21,9 +21,82 @@
+@@ -21,9 +21,77 @@
  // Source: https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-1.0.pdf
-
+ 
  #ifdef _WIN64
 -#error "The masm based version must be used for Windows"
 -#endif
-
+ 
 +// Windows x64 needs SEH unwind info (.pdata/.xdata) for this frame, or the OS unwinder cannot walk
 +// through it -- the masm version the upstream #error points to carries .pushreg/.allocstack/.savexmm128
 +// directives for exactly this reason. llvm-mingw's clang can't assemble the .asm, so emit the equivalent
@@ -80,7 +80,7 @@
  asm(
  #ifdef __APPLE__
      ".globl _PushAllRegistersAndIterateStack            \n"
-@@ -81,3 +121,5 @@
+@@ -81,3 +149,5 @@
      ".Lfunc_end0-PushAllRegistersAndIterateStack        \n"
  #endif  // !defined(__APPLE__)
      ".cfi_endproc                                      \n");
