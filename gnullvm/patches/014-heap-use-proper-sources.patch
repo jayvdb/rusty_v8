@@ -1,38 +1,65 @@
 --- a/src/heap/base/asm/x64/push_registers_asm.cc	2026-03-20 22:50:53
 +++ b/src/heap/base/asm/x64/push_registers_asm.cc	2026-04-09 17:49:23
-@@ -21,9 +21,49 @@
+@@ -21,9 +21,82 @@
  // Source: https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-1.0.pdf
- 
+
  #ifdef _WIN64
 -#error "The masm based version must be used for Windows"
 -#endif
- 
+
++// Windows x64 needs SEH unwind info (.pdata/.xdata) for this frame, or the OS unwinder cannot walk
++// through it -- the masm version the upstream #error points to carries .pushreg/.allocstack/.savexmm128
++// directives for exactly this reason. llvm-mingw's clang can't assemble the .asm, so emit the equivalent
++// GAS `.seh_*` directives inline here. rsp-based unwind codes (no .seh_setframe): rbp is push/pop'd as a
++// normal nonvolatile, so the prolog is a plain sequence of pushes + a fixed stack allocation.
 +asm(".globl PushAllRegistersAndIterateStack             \n"
++    ".seh_proc PushAllRegistersAndIterateStack          \n"
 +    "PushAllRegistersAndIterateStack:                   \n"
 +    // rbp is callee-saved. Maintain proper frame pointer for debugging.
 +    "  push %rbp                                        \n"
++    "  .seh_pushreg %rbp                                \n"
 +    "  mov %rsp, %rbp                                   \n"
 +    // Dummy for alignment.
 +    "  push $0xCDCDCD                                   \n"
++    "  .seh_stackalloc 8                                \n"
 +    "  push %rsi                                        \n"
++    "  .seh_pushreg %rsi                                \n"
 +    "  push %rdi                                        \n"
++    "  .seh_pushreg %rdi                                \n"
 +    "  push %rbx                                        \n"
++    "  .seh_pushreg %rbx                                \n"
 +    "  push %r12                                        \n"
++    "  .seh_pushreg %r12                                \n"
 +    "  push %r13                                        \n"
++    "  .seh_pushreg %r13                                \n"
 +    "  push %r14                                        \n"
++    "  .seh_pushreg %r14                                \n"
 +    "  push %r15                                        \n"
++    "  .seh_pushreg %r15                                \n"
 +    "  sub $160, %rsp                                   \n"
++    "  .seh_stackalloc 160                              \n"
 +    // Use aligned instrs as we are certain that the stack is properly aligned.
 +    "  movdqa %xmm6, 144(%rsp)                          \n"
++    "  .seh_savexmm %xmm6, 144                          \n"
 +    "  movdqa %xmm7, 128(%rsp)                          \n"
++    "  .seh_savexmm %xmm7, 128                          \n"
 +    "  movdqa %xmm8, 112(%rsp)                          \n"
++    "  .seh_savexmm %xmm8, 112                          \n"
 +    "  movdqa %xmm9, 96(%rsp)                           \n"
++    "  .seh_savexmm %xmm9, 96                           \n"
 +    "  movdqa %xmm10, 80(%rsp)                          \n"
++    "  .seh_savexmm %xmm10, 80                          \n"
 +    "  movdqa %xmm11, 64(%rsp)                          \n"
++    "  .seh_savexmm %xmm11, 64                          \n"
 +    "  movdqa %xmm12, 48(%rsp)                          \n"
++    "  .seh_savexmm %xmm12, 48                          \n"
 +    "  movdqa %xmm13, 32(%rsp)                          \n"
++    "  .seh_savexmm %xmm13, 32                          \n"
 +    "  movdqa %xmm14, 16(%rsp)                          \n"
++    "  .seh_savexmm %xmm14, 16                          \n"
 +    "  movdqa %xmm15, (%rsp)                            \n"
++    "  .seh_savexmm %xmm15, 0                           \n"
++    "  .seh_endprologue                                 \n"
 +    // Pass 1st parameter (rcx) unchanged (Stack*).
 +    // Pass 2nd parameter (rdx) unchanged (StackVisitor*).
 +    // Save 3rd parameter (r8; IterateStackCallback)
@@ -45,7 +72,8 @@
 +    "  add $224, %rsp                                   \n"
 +    // Restore rbp as it was used as frame pointer.
 +    "  pop %rbp                                         \n"
-+    "  ret                                              \n");
++    "  ret                                              \n"
++    "  .seh_endproc                                     \n");
 +
 +#else  // !_WIN64
 +
