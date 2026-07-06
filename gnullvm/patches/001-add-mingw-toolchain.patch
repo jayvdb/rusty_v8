@@ -1,7 +1,8 @@
-diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
---- a/config/BUILD.gn	2026-04-09 16:58:20
-+++ b/config/BUILD.gn	2026-04-09 19:01:51
-@@ -157,25 +157,25 @@
+diff --git a/config/BUILD.gn b/config/BUILD.gn
+index 72ccd08..3069f88 100644
+--- a/config/BUILD.gn
++++ b/config/BUILD.gn
+@@ -157,25 +157,25 @@ config("default_libs") {
      # instead the targets that use the less common ones (e.g. wininet or
      # winspool) should include those explicitly.
      libs = [
@@ -46,7 +47,7 @@ diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
  
        # Please don't add more stuff here. We should actually be making this
        # list smaller, since all common things should be covered. If you need
-@@ -191,9 +191,9 @@
+@@ -191,11 +191,15 @@ config("default_libs") {
      } else {
        # These libraries are not compatible with Windows UWP (i.e. store apps.)
        libs += [
@@ -58,8 +59,14 @@ diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
 +        "ole32",
        ]
      }
++    if (is_mingw) {
++      # winpthreads provides the pthread_* symbols abseil/V8 base reference on mingw.
++      libs += [ "pthread" ]
++    }
    } else if (is_android) {
-@@ -253,7 +253,7 @@
+     libs = [
+       "dl",
+@@ -249,7 +253,7 @@ group("common_deps_without_libcxx") {
      }
    }
  
@@ -68,7 +75,7 @@ diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
      if (build_with_chromium && is_component_build) {
        # To enable allocator_shim for the windows component built chrome,
        # need to make all shared libraries and also executable(i.e.chrome.exe)
-@@ -405,7 +405,7 @@
+@@ -401,7 +405,7 @@ config("shared_library_config") {
  # Recommend precompiled headers for targets with more than 50 .cc files.
  config("precompiled_headers") {
    if (enable_precompiled_headers) {
@@ -77,7 +84,7 @@ diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
        # This is a string rather than a file GN knows about. It has to match
        # exactly what's in the /FI flag below, and what might appear in the
        # source code in quotes for an #include directive.
-@@ -418,7 +418,7 @@
+@@ -414,7 +418,7 @@ config("precompiled_headers") {
  
        # Force include the header.
        cflags = [ "/FI$precompiled_header" ]
@@ -86,10 +93,11 @@ diff -ruN --ex build-repo/config/BUILD.gn build-repo-check/config/BUILD.gn
        precompiled_source = "//build/precompile.h"
      }
    }
-diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCONFIG.gn
---- a/config/BUILDCONFIG.gn	2026-04-09 16:58:20
-+++ b/config/BUILDCONFIG.gn	2026-04-09 19:50:22
-@@ -135,6 +135,9 @@
+diff --git a/config/BUILDCONFIG.gn b/config/BUILDCONFIG.gn
+index 12595c1..5f586c2 100644
+--- a/config/BUILDCONFIG.gn
++++ b/config/BUILDCONFIG.gn
+@@ -135,6 +135,9 @@ declare_args() {
    # set "is_official_build" to true for any build intended to ship to end-users.
    is_official_build = false
  
@@ -99,7 +107,7 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
    # Set to true when compiling with the Clang compiler.
    is_clang = current_os != "linux" ||
               (current_cpu != "mips" && current_cpu != "mips64")
-@@ -217,16 +220,20 @@
+@@ -226,16 +229,20 @@ if (host_toolchain == "") {
      # On Windows always use the target CPU for host builds for x86/x64. On the
      # configurations we support this will always work and it saves build steps.
      # Windows ARM64 targets require an x64 host for cross build.
@@ -128,7 +136,7 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
      }
    } else if (host_os == "aix") {
      host_toolchain = "//build/toolchain/aix:$host_cpu"
-@@ -261,10 +268,14 @@
+@@ -270,10 +277,14 @@ if (target_os == "android") {
  } else if (target_os == "win") {
    # On Windows, we use the same toolchain for host and target by default.
    # Beware, win cross builds have some caveats, see docs/win_cross.md
@@ -146,7 +154,7 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
    }
  } else if (target_os == "winuwp") {
    # Only target WinUWP on for a Windows store application and only
-@@ -323,6 +334,7 @@
+@@ -333,6 +344,7 @@ is_win = current_os == "win" || current_os == "winuwp"
  
  is_apple = is_ios || is_mac || is_watchos
  is_posix = !is_win && !is_fuchsia
@@ -154,7 +162,7 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
  
  # =============================================================================
  # TARGET DEFAULTS
-@@ -401,7 +413,7 @@
+@@ -413,7 +425,7 @@ if (is_android) {
        [ "//build/config/android:default_orderfile_instrumentation" ]
  }
  
@@ -163,43 +171,34 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
    default_compiler_configs += [
      "//build/config/clang:extra_warnings",
      "//build/config/clang:find_bad_constructs",
-@@ -429,7 +441,7 @@
- 
- # Compute the set of configs common to all linked targets (shared libraries,
- # loadable modules, executables) to avoid duplication below.
+@@ -449,7 +461,7 @@ _linker_configs = [
+   "//build/config:default_libs",
+   "//build/config/compiler:linker",
+ ]
 -if (is_win) {
 +if (is_msvc) {
    # Many targets remove these configs, so they are not contained within
    # //build/config:executable_config for easy removal.
-   _linker_configs = [
-@@ -456,7 +468,7 @@
+   _linker_configs += [
+@@ -473,7 +485,7 @@ default_executable_configs = default_compiler_configs + _linker_configs + [
                                 "//build/config:executable_config",
-                              ] + _linker_configs
+                              ]
  
 -if (is_win) {
 +if (is_msvc) {
    # Turn on linker CFI for executables, and position it so it can be removed
    # if needed.
    default_executable_configs += [ "//build/config/win:cfi_linker" ]
-@@ -480,7 +492,7 @@
-                                    "//build/config:default_libs",
-                                    "//build/config:shared_library_config",
-                                  ] + _linker_configs
+@@ -495,7 +507,7 @@ set_defaults("executable") {
+ # mode).
+ default_shared_library_configs = default_compiler_configs + _linker_configs +
+                                  [ "//build/config:shared_library_config" ]
 -if (is_win) {
 +if (is_msvc) {
    # Turn on linker CFI for DLLs, and position it so it can be removed if needed.
    default_shared_library_configs += [ "//build/config/win:cfi_linker" ]
  }
-@@ -564,7 +576,7 @@
-         public_deps = []
-       }
- 
--      if (is_clang) {
-+      if (is_clang && !is_mingw) {
-         # When clang is used, some target may use clang module. This dependency
-         # is required for things to work, regardless of whether the libc++
-         # module is used in this target or not.
-@@ -575,7 +587,7 @@
+@@ -583,7 +595,7 @@ foreach(_target_type,
        }
  
        if (!defined(use_libcxx_modules)) {
@@ -208,16 +207,7 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
        }
  
        if (filter_include(
-@@ -685,7 +697,7 @@
-         public_deps = []
-       }
- 
--      if (is_clang) {
-+      if (is_clang && !is_mingw) {
-         # When clang is used, some target may use clang module. This dependency
-         # is required for things to work, regardless of whether the libc++
-         # module is used in this target or not.
-@@ -696,7 +708,7 @@
+@@ -714,7 +726,7 @@ foreach(_target_type,
        }
  
        if (!defined(use_libcxx_modules)) {
@@ -226,10 +216,11 @@ diff -ruN --ex build-repo/config/BUILDCONFIG.gn build-repo-check/config/BUILDCON
        }
  
        if (filter_include(
-diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compiler/BUILD.gn
---- a/config/compiler/BUILD.gn	2026-04-09 16:58:20
-+++ b/config/compiler/BUILD.gn	2026-04-09 19:59:12
-@@ -366,14 +366,20 @@
+diff --git a/config/compiler/BUILD.gn b/config/compiler/BUILD.gn
+index 11ddb49..e48f30b 100644
+--- a/config/compiler/BUILD.gn
++++ b/config/compiler/BUILD.gn
+@@ -371,14 +371,20 @@ config("compiler") {
  
    configs += [
      # See the definitions below.
@@ -252,7 +243,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
    # TODO(https://crbug.com/404297941): Disable clang_warning_suppression
    # configuration because the ICECC build doesn't distribute the
    # warning_suppression.txt file to other ICECC nodes. As a result, the nodes
-@@ -399,8 +405,8 @@
+@@ -404,8 +410,8 @@ config("compiler") {
    # Make signed overflow and pointer overflowdefined to wrap.
    # This avoids risking miscompilations and security bugs on overflow.
    # When UBSan is enabled, we want to continue flagging overflows as a bug.
@@ -263,7 +254,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags += [ "/clang:-fno-strict-overflow" ]
      } else {
        cflags += [ "-fno-strict-overflow" ]
-@@ -410,7 +416,7 @@
+@@ -415,7 +421,7 @@ config("compiler") {
    # Don't emit the GCC version ident directives, they just end up in the
    # .comment section or debug info taking up binary size, and makes comparing
    # .o files built with different compiler versions harder.
@@ -272,7 +263,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [ "-fno-ident" ]
    }
  
-@@ -422,9 +428,9 @@
+@@ -427,9 +433,9 @@ config("compiler") {
    # optimizations. This flag must be consistently set for both module
    # precompilation and normal source compilation, which means it's enabled for
    # some targets even in debug builds.
@@ -284,26 +275,20 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [ "-fno-math-errno" ]
    }
  
-@@ -484,6 +490,18 @@
-     if (fatal_linker_warnings && is_apple) {
-       ldflags += [ "-Wl,-fatal_warnings" ]
+@@ -588,10 +594,9 @@ config("compiler") {
+   if (is_clang) {
+     # Flags for diagnostics.
+     cflags += [ "-fcolor-diagnostics" ]
+-    if (!is_win) {
++    if (!is_msvc && !is_mingw) {
+       cflags += [ "-fdiagnostics-show-inlining-chain" ]
+-    } else {
+-      # Combine after https://github.com/llvm/llvm-project/pull/192241
++    } else if (is_msvc) {
+       cflags += [ "/clang:-fdiagnostics-show-inlining-chain" ]
      }
-+  } else if (is_mingw) {
-+    cflags += [ "-fno-strict-aliasing" ]
-+
-+    if (is_debug) {
-+      cflags += [ "-fstack-protector-strong" ]
-+    } else {
-+      cflags += [ "-fstack-protector" ]
-+    }
-+
-+    if (use_lld) {
-+      ldflags += [ "-fuse-ld=lld" ]
-+    }
-   }
- 
-   # Non-Apple Posix and Fuchsia compiler flags setup.
-@@ -647,7 +665,7 @@
+     if (diagnostics_print_source_range_info && !is_win) {
+@@ -607,7 +612,7 @@ config("compiler") {
      cflags += [ "-fmerge-all-constants" ]
  
      if (!use_sized_deallocation) {
@@ -312,17 +297,8 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
          cflags += [ "/Zc:sizedDealloc-" ]
        } else {
          cflags += [ "-fno-sized-deallocation" ]
-@@ -659,7 +677,7 @@
+@@ -615,7 +620,7 @@ config("compiler") {
      }
-   }
- 
--  if (use_lld) {
-+  if (use_lld && !is_mingw) {
-     # TODO(thakis): Make the driver pass --color-diagnostics to the linker
-     # if -fcolor-diagnostics is passed to it, and pass -fcolor-diagnostics
-     # in ldflags instead.
-@@ -678,7 +696,7 @@
-     ldflags += [ "-Wl,-z,keep-text-section-prefix" ]
    }
  
 -  if (is_clang) {
@@ -330,7 +306,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [ "-fcrash-diagnostics-dir=" + clang_diagnostic_dir ]
      if (save_reproducers_on_lld_crash && use_lld) {
        ldflags += [
-@@ -735,7 +753,7 @@
+@@ -679,7 +684,7 @@ config("compiler") {
  
    # C11/C++11 compiler flags setup.
    # ---------------------------
@@ -339,7 +315,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (is_clang) {
        standard_prefix = "c"
  
-@@ -758,7 +776,7 @@
+@@ -702,7 +707,7 @@ config("compiler") {
      } else {
        cflags_cc += [ "-std=${standard_prefix}++20" ]
      }
@@ -348,7 +324,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags_c += [ "/std:c11" ]
      if (use_cxx23) {
        cflags_cc += [ "/std:c++23preview" ]
-@@ -967,7 +985,7 @@
+@@ -911,7 +916,7 @@ config("compiler") {
        if (use_lld && is_mac) {
          ldflags += [ "-Wl,--time-trace" ]
        }
@@ -357,16 +333,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags += [
          # "Documented" here:
          # http://aras-p.info/blog/2017/10/23/Best-unknown-MSVC-flag-d2cgsummary/
-@@ -996,7 +1014,7 @@
-   # present. On Android this increases binary size due to more thinks for long
-   # jumps. Turn it off by default and enable selectively for targets where it's
-   # beneficial.
--  if (use_lld && !enable_call_graph_profile_sort) {
-+  if (use_lld && !enable_call_graph_profile_sort && !is_mingw) {
-     if (is_win) {
-       ldflags += [ "/call-graph-profile-sort:no" ]
-     } else if (!is_wasm) {
-@@ -1006,7 +1024,7 @@
+@@ -921,7 +926,7 @@ config("compiler") {
    }
  
    if (is_clang && show_includes) {
@@ -375,7 +342,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags += [
          "/clang:-H",
          "/clang:-fshow-skipped-includes",
-@@ -1022,7 +1040,7 @@
+@@ -937,7 +942,7 @@ config("compiler") {
    # This flag enforces that member pointer base types are complete. It helps
    # prevent us from running into problems in the Microsoft C++ ABI (see
    # https://crbug.com/847724).
@@ -384,47 +351,25 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [ "-fcomplete-member-pointers" ]
    }
  
-@@ -1283,13 +1301,15 @@
-     configs += [ "//build/config/chromeos:compiler_cpu_abi" ]
+@@ -1133,7 +1138,7 @@ config("linker") {
+     }
    }
  
--  if ((is_posix && !is_apple) || is_fuchsia) {
-+  if ((is_posix && !is_apple) || is_fuchsia || is_mingw) {
-     # CPU architecture. We may or may not be doing a cross compile now, so for
-     # simplicity we always explicitly set the architecture.
-     if (current_cpu == "x64") {
--      if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
-+      if (is_clang && !is_android && !is_fuchsia && !is_mingw && !is_chromeos_device) {
-         cflags += [ "--target=x86_64-unknown-linux-gnu" ]
-         ldflags += [ "--target=x86_64-unknown-linux-gnu" ]
-+      } else if (is_mingw) {
-+        ldflags += [ "-m64" ]
-       } else {
-         cflags += [ "-m64" ]
-         ldflags += [ "-m64" ]
-@@ -1301,9 +1321,11 @@
-         ldflags += [ "-march=$cros_target_cpu_arch" ]
-       }
-     } else if (current_cpu == "x86") {
--      if (is_clang && !is_android && !is_chromeos_device) {
-+      if (is_clang && !is_android && !is_mingw && !is_chromeos_device) {
-         cflags += [ "--target=i386-unknown-linux-gnu" ]
-         ldflags += [ "--target=i386-unknown-linux-gnu" ]
-+      } else if (is_mingw) {
-+        ldflags += [ "-m32" ]
-       } else {
-         cflags += [ "-m32" ]
-         ldflags += [ "-m32" ]
-@@ -1322,7 +1344,7 @@
-         "-mfloat-abi=$arm_float_abi",
-       ]
-     } else if (current_cpu == "arm64") {
--      if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
-+      if (is_clang && !is_android && !is_fuchsia && !is_mingw && !is_chromeos_device) {
-         cflags += [ "--target=aarch64-linux-gnu" ]
-         ldflags += [ "--target=aarch64-linux-gnu" ]
-       }
-@@ -1645,7 +1667,7 @@
+-  if (use_lld) {
++  if (use_lld && !is_mingw) {
+     # TODO(thakis): Make the driver pass --color-diagnostics to the linker
+     # if -fcolor-diagnostics is passed to it, and pass -fcolor-diagnostics
+     # in ldflags instead.
+@@ -1183,7 +1188,7 @@ config("linker") {
+   # present. On Android this increases binary size due to more thinks for long
+   # jumps. Turn it off by default and enable selectively for targets where it's
+   # beneficial.
+-  if (use_lld && !enable_call_graph_profile_sort) {
++  if (use_lld && !enable_call_graph_profile_sort && !is_mingw) {
+     if (is_win) {
+       ldflags += [ "/call-graph-profile-sort:no" ]
+     } else if (!is_wasm) {
+@@ -1383,7 +1388,7 @@ config("compiler_deterministic") {
    # Eliminate build metadata (__DATE__, __TIME__ and __TIMESTAMP__) for
    # deterministic build.  See https://crbug.com/314403
    if (!is_official_build) {
@@ -433,7 +378,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags += [
          "/wd4117",  # Trying to define or undefine a predefined macro.
          "/D__DATE__=",
-@@ -1685,7 +1707,7 @@
+@@ -1423,7 +1428,7 @@ config("compiler_deterministic") {
        asmflags = [ "-Wa,-fdebug-compilation-dir,." ]
      }
  
@@ -442,7 +387,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        if (symbol_level == 2 || (is_clang && using_sanitizer)) {
          # Absolutize source file paths for PDB. Pass the real build directory
          # if the pdb contains source-level debug information and if linker
-@@ -1733,7 +1755,7 @@
+@@ -1471,7 +1476,7 @@ config("compiler_deterministic") {
  
  config("clang_revision") {
    if (is_clang && clang_base_path == default_clang_base_path &&
@@ -451,16 +396,16 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      _perform_consistency_checks = current_toolchain == default_toolchain
      if (llvm_force_head_revision) {
        _head_revision_stamp_path = "//third_party/llvm-build/force_head_revision"
-@@ -1952,7 +1974,7 @@
-   # the C++ symbols. This config ensures the C++ symbols exist and are strong in
-   # order to cause that replacement to occur by explicitly linking in clang's
-   # compiler-rt library.
+@@ -1696,7 +1701,7 @@ config("runtime_library") {
+   # can be replaced by the C++ symbols. This config ensures the C++ symbols
+   # exist and are strong in order to cause that replacement to occur by
+   # explicitly linking in clang's compiler-rt library.
 -  if (is_clang && !(is_a_target_toolchain && is_cronet_build)) {
 +  if (is_clang && !(is_a_target_toolchain && is_cronet_build) && !is_mingw) {
      configs += [ "//build/config/clang:compiler_builtins" ]
    }
  
-@@ -2018,7 +2040,7 @@
+@@ -1762,7 +1767,7 @@ config("runtime_library") {
  # is broken out separately so nocompile tests can force-enable this setting
  # independently of the default warning flags.
  config("treat_warnings_as_errors") {
@@ -469,7 +414,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags = [ "/WX" ]
    } else {
      cflags = [ "-Werror" ]
-@@ -2069,7 +2091,7 @@
+@@ -1814,7 +1819,7 @@ config("default_warnings") {
    ldflags = []
    configs = []
  
@@ -478,7 +423,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (fatal_linker_warnings) {
        arflags = [ "/WX" ]
        ldflags = [ "/WX" ]
-@@ -2145,10 +2167,33 @@
+@@ -1890,10 +1895,33 @@ config("default_warnings") {
        # files.
        cflags += [ "-Wno-packed-not-aligned" ]
      }
@@ -513,7 +458,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [
        # Disables.
        "-Wno-missing-field-initializers",  # "struct foo f = {0};"
-@@ -2319,7 +2364,7 @@
+@@ -2086,7 +2114,7 @@ config("prevent_unsafe_narrowing") {
  # part of Chromium.
  
  config("chromium_code") {
@@ -522,7 +467,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (is_clang) {
        cflags = [ "/W4" ]  # Warning level 4.
  
-@@ -2374,7 +2419,7 @@
+@@ -2149,7 +2177,7 @@ config("chromium_code") {
      }
    }
  
@@ -531,7 +476,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags += [
        # Warn on missing break statements at the end of switch cases.
        # For intentional fallthrough, use [[fallthrough]].
-@@ -2427,7 +2472,7 @@
+@@ -2202,7 +2230,7 @@ config("no_chromium_code") {
    cflags_cc = []
    defines = []
  
@@ -540,7 +485,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (is_clang) {
        cflags += [ "/W3" ]  # Warning level 3.
      }
-@@ -2482,7 +2527,7 @@
+@@ -2257,7 +2285,7 @@ config("noshadowing") {
  # Allows turning Run-Time Type Identification on or off.
  
  config("rtti") {
@@ -549,7 +494,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags_cc = [ "/GR" ]
    } else {
      cflags_cc = [ "-frtti" ]
-@@ -2492,7 +2537,7 @@
+@@ -2267,7 +2295,7 @@ config("rtti") {
  config("no_rtti") {
    # Some sanitizer configs may require RTTI to be left enabled globally
    if (!use_rtti) {
@@ -558,7 +503,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags_cc = [ "/GR-" ]
      } else {
        cflags_cc = [ "-fno-rtti" ]
-@@ -2544,7 +2589,7 @@
+@@ -2320,7 +2348,7 @@ config("thin_archive") {
        "-T",
        "-S",
      ]
@@ -567,7 +512,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      arflags = [ "/llvmlibthin" ]
    }
  }
-@@ -2555,7 +2600,7 @@
+@@ -2331,7 +2359,7 @@ config("thin_archive") {
  # Note: exceptions are disallowed in Google code.
  
  config("exceptions") {
@@ -576,7 +521,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # Enables exceptions in the STL.
      if (!use_custom_libcxx) {
        defines = [ "_HAS_EXCEPTIONS=1" ]
-@@ -2568,7 +2613,7 @@
+@@ -2344,7 +2372,7 @@ config("exceptions") {
  }
  
  config("no_exceptions") {
@@ -585,7 +530,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # Disables exceptions in the STL.
      # libc++ uses the __has_feature macro to control whether to use exceptions,
      # so defining this macro is unnecessary. Defining _HAS_EXCEPTIONS to 0 also
-@@ -2578,7 +2623,9 @@
+@@ -2354,7 +2382,9 @@ config("no_exceptions") {
      if (!use_custom_libcxx) {
        defines = [ "_HAS_EXCEPTIONS=0" ]
      }
@@ -596,7 +541,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags_cc = [ "-fno-exceptions" ]
      cflags_objcc = cflags_cc
    }
-@@ -2653,7 +2700,7 @@
+@@ -2429,7 +2459,7 @@ config("no_incompatible_pointer_warnings") {
  
  # Shared settings for both "optimize" and "optimize_max" configs.
  # IMPORTANT: On Windows "/O1" and "/O2" must go before the common flags.
@@ -605,16 +550,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
    common_optimize_on_cflags = [
      "/Oy-",  # Disable omitting frame pointers, must be after /O2.
      "/Zc:inline",  # Remove unreferenced COMDAT (faster links).
-@@ -2703,7 +2750,7 @@
-         "-Wl,-no_function_starts",
-       ]
-     }
--  } else if (current_os != "aix" && current_os != "zos") {
-+  } else if (current_os != "aix" && current_os != "zos" && !is_mingw) {
-     # Non-Mac Posix flags.
-     # Aix does not support these.
- 
-@@ -2782,7 +2829,7 @@
+@@ -2565,7 +2595,7 @@ config("default_stack_frames") {
  # [1]: https://pinpoint-dot-chromeperf.appspot.com/job/132bc772be0000
  # [2]: https://crrev.com/c/5447532
  config("optimize") {
@@ -623,7 +559,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # clang-cl's /O2 corresponds to clang's -O3, and really want -O2 for
      # consistency with the other platforms.
      cflags = [
-@@ -2806,7 +2853,7 @@
+@@ -2589,7 +2619,7 @@ config("optimize") {
      }
  
      if (is_clang && use_ml_inliner && is_a_target_toolchain && !is_chromeos &&
@@ -632,7 +568,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        cflags += [
          "-mllvm",
          "-enable-ml-inliner=release",
-@@ -2831,7 +2878,7 @@
+@@ -2614,7 +2644,7 @@ config("optimize") {
  
  # Turn off optimizations.
  config("no_optimize") {
@@ -641,7 +577,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      cflags = [
        "/Od",  # Disable optimization.
        "/Ob0",  # Disable all inlining (on by default).
-@@ -2867,7 +2914,7 @@
+@@ -2650,7 +2680,7 @@ config("no_optimize") {
  # elsewhere.
  config("optimize_max") {
    ldflags = common_optimize_on_ldflags
@@ -650,7 +586,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # Favor speed over size, /O2 must be before the common flags.
      # /O2 implies /Ot, /Oi, and /GF.
      cflags = [ "/O2" ] + common_optimize_on_cflags
-@@ -2888,7 +2935,7 @@
+@@ -2671,7 +2701,7 @@ config("optimize_max") {
  # so that we don't need this disclaimer.
  config("optimize_speed") {
    ldflags = common_optimize_on_ldflags
@@ -659,7 +595,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # Favor speed over size, /O2 must be before the common flags.
      # /O2 implies /Ot, /Oi, and /GF.
      cflags = [ "/O2" ] + common_optimize_on_cflags
-@@ -2930,7 +2977,7 @@
+@@ -2713,7 +2743,7 @@ config("default_optimization") {
  }
  
  _clang_sample_profile = ""
@@ -668,7 +604,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
    if (clang_sample_profile_path != "") {
      _clang_sample_profile = clang_sample_profile_path
    } else if (clang_use_default_sample_profile) {
-@@ -3033,7 +3080,7 @@
+@@ -2838,7 +2868,7 @@ config("split_dwarf") {
  config("symbols") {
    rustflags = []
    configs = []
@@ -677,7 +613,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (is_clang) {
        cflags = [
          # Debug information in the .obj files.
-@@ -3081,7 +3128,7 @@
+@@ -2889,7 +2919,7 @@ config("symbols") {
  
      # On aix -gdwarf causes linker failures due to thread_local variables.
      # On zos -gdwarf causes INSUFFICIENT ABOVE THE LINE STORAGE WAS AVAILABLE.
@@ -686,16 +622,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        if (use_dwarf5) {
          cflags += [ "-gdwarf-5" ]
          rustflags += [ "-Zdwarf-version=5" ]
-@@ -3139,7 +3186,7 @@
-       ldflags += split_dwarf_flags
-     }
- 
--    _enable_gdb_index = symbol_level == 2 && !is_apple && use_lld && !is_wasm
-+    _enable_gdb_index = symbol_level == 2 && !is_apple && use_lld && !is_wasm && !is_mingw
-     if (_enable_gdb_index) {
-       if (is_clang) {
-         # This flag enables the GNU-format pubnames and pubtypes sections,
-@@ -3159,7 +3206,7 @@
+@@ -2959,7 +2989,7 @@ config("symbols") {
      configs += [ "//build/config:compress_debug_sections" ]
    }
  
@@ -704,7 +631,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      # Remove unreferenced methods to reduce type info in symbols.
      # See: https://github.com/llvm/llvm-project/pull/87018.
      # The downside with this flag is precisely that: Unreferenced methods get
-@@ -3172,7 +3219,7 @@
+@@ -2972,7 +3002,7 @@ config("symbols") {
      cflags += [ "-gomit-unreferenced-methods" ]
    }
  
@@ -713,16 +640,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      if (is_apple) {
        # TODO(crbug.com/40117949): Investigate missing debug info on mac.
        # Make sure we don't use constructor homing on mac.
-@@ -3197,7 +3244,7 @@
- # when crash happens in unittests running on buildbot.
- config("minimal_symbols") {
-   rustflags = []
--  if (is_win) {
-+  if (is_msvc) {
-     # Functions, files, and line tables only.
-     cflags = []
- 
-@@ -3232,7 +3279,7 @@
+@@ -3033,7 +3063,7 @@ config("minimal_symbols") {
        # TODO(thakis): Remove this once mac_deployment_target is 10.11.
        cflags += [ "-gdwarf-4" ]
        rustflags += [ "-Zdwarf-version=4" ]
@@ -731,7 +649,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
        # On aix -gdwarf causes linker failures due to thread_local variables.
        # Recent clang versions default to DWARF5 on Linux, and Android is about
        # to switch. TODO: Adopt that in controlled way.
-@@ -3272,7 +3319,7 @@
+@@ -3089,7 +3119,7 @@ config("minimal_symbols") {
  # told to not generate debug information and the linker then just puts function
  # names in the final debug information.
  config("no_symbols") {
@@ -740,7 +658,7 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      ldflags = [ "/DEBUG" ]
  
      # All configs using /DEBUG should include this:
-@@ -3390,7 +3437,7 @@
+@@ -3216,7 +3246,7 @@ buildflag_header("compiler_buildflags") {
  }
  
  config("cet_shadow_stack") {
@@ -749,34 +667,37 @@ diff -ruN --ex build-repo/config/compiler/BUILD.gn build-repo-check/config/compi
      assert(target_cpu == "x64")
      ldflags = [ "/CETCOMPAT" ]
    }
-diff -ruN --ex build-repo/config/compiler/compiler.gni build-repo-check/config/compiler/compiler.gni
---- a/config/compiler/compiler.gni	2026-04-09 16:58:20
-+++ b/config/compiler/compiler.gni	2026-04-09 19:01:51
-@@ -329,7 +329,7 @@
-     # info or variable info, so we can leave that out to speed up the build.
-     # Sanitizers also require symbols for filename suppressions to work.
-     symbol_level = 1
--  } else if ((!is_linux && !is_chromeos && !is_fuchsia &&
-+  } else if ((!is_linux && !is_chromeos && !is_fuchsia && !is_mingw &&
-               current_os != "aix") || is_debug) {
-     # Linux builds slower by having symbols as part of the target binary,
-     # whereas Mac and Windows have them separate, so in Release Linux, default
-diff -ruN --ex build-repo/config/linux/pkg-config.py build-repo-check/config/linux/pkg-config.py
---- a/config/linux/pkg-config.py	2026-04-09 16:58:20
-+++ b/config/linux/pkg-config.py	2026-04-09 19:01:51
-@@ -108,7 +108,7 @@
+diff --git a/config/compiler/compiler.gni b/config/compiler/compiler.gni
+index 21269a3..0deada4 100644
+--- a/config/compiler/compiler.gni
++++ b/config/compiler/compiler.gni
+@@ -150,7 +150,7 @@ if (is_chromeos_device) {
+   # info or variable info, so we can leave that out to speed up the build.
+   # Sanitizers also require symbols for filename suppressions to work.
+   default_symbol_level = 1
+-} else if ((!is_linux && !is_chromeos && !is_fuchsia && current_os != "aix") ||
++} else if ((!is_linux && !is_chromeos && !is_fuchsia && !is_mingw && current_os != "aix") ||
+            is_debug) {
+   # Linux builds slower by having symbols as part of the target binary,
+   # whereas Mac and Windows have them separate, so in Release Linux, default
+diff --git a/config/linux/pkg-config.py b/config/linux/pkg-config.py
+index ec98128..2218617 100755
+--- a/config/linux/pkg-config.py
++++ b/config/linux/pkg-config.py
+@@ -125,7 +125,7 @@ def main():
    # If this is run on non-Linux platforms, just return nothing and indicate
    # success. This allows us to "kind of emulate" a Linux build from other
    # platforms.
 -  if "linux" not in sys.platform:
 +  if sys.platform not in ["linux", "win32"]:
-     print("[[],[],[],[],[]]")
-     return 0
- 
-diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/sanitizers/BUILD.gn
---- a/config/sanitizers/BUILD.gn	2026-04-09 16:58:20
-+++ b/config/sanitizers/BUILD.gn	2026-04-09 19:01:51
-@@ -72,7 +72,7 @@
+     if options.dridriverdir or options.libdir:
+       sys.stdout.write("")
+       return 0
+diff --git a/config/sanitizers/BUILD.gn b/config/sanitizers/BUILD.gn
+index b8a733f..8f455f8 100644
+--- a/config/sanitizers/BUILD.gn
++++ b/config/sanitizers/BUILD.gn
+@@ -72,7 +72,7 @@ group("deps") {
      data += [ "//tools/memory/sanitizer/escalate_sanitizer_warnings.py" ]
    }
    if (is_asan || is_ubsan_any) {
@@ -785,7 +706,7 @@ diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/san
        data_deps = [ ":copy_sanitizer_runtime" ]
      }
      if (is_apple) {
-@@ -90,7 +90,7 @@
+@@ -90,7 +90,7 @@ group("deps") {
  assert(!(is_win && is_asan && current_cpu == "x86"),
         "ASan is only supported in 64-bit builds on Windows.")
  
@@ -794,7 +715,7 @@ diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/san
    _clang_rt_dso_full_path =
        "$clang_base_path/lib/clang/$clang_version/lib/$clang_rt_dso_path"
  
-@@ -312,7 +312,7 @@
+@@ -309,7 +309,7 @@ config("default_sanitizer_ldflags") {
          }
        }
      }
@@ -803,7 +724,7 @@ diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/san
      # Windows directly calls link.exe instead of the compiler driver when
      # linking.  Hence, pass the runtime libraries instead of -fsanitize=address
      # or -fsanitize=fuzzer.
-@@ -386,7 +386,7 @@
+@@ -384,7 +384,7 @@ config("asan_flags") {
        # already on for Fuchsia). Pass the flag to turn it back off.
        cflags += [ "-fno-sanitize-address-globals-dead-stripping" ]
      }
@@ -812,7 +733,7 @@ diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/san
        if (!defined(asan_win_blocklist_path)) {
          asan_win_blocklist_path =
              rebase_path("//tools/memory/asan/blocklist_win.txt", root_build_dir)
-@@ -440,7 +440,7 @@
+@@ -438,7 +438,7 @@ config("cfi_flags") {
  
      if (use_cfi_diag) {
        cflags += [ "-fno-sanitize-trap=cfi" ]
@@ -821,10 +742,11 @@ diff -ruN --ex build-repo/config/sanitizers/BUILD.gn build-repo-check/config/san
          cflags += [
            "/Oy-",
            "/Ob0",
-diff -ruN --ex build-repo/config/sanitizers/sanitizers.gni build-repo-check/config/sanitizers/sanitizers.gni
---- a/config/sanitizers/sanitizers.gni	2026-04-09 16:58:20
-+++ b/config/sanitizers/sanitizers.gni	2026-04-09 19:01:51
-@@ -445,7 +445,7 @@
+diff --git a/config/sanitizers/sanitizers.gni b/config/sanitizers/sanitizers.gni
+index 04d86c5..6876c8f 100644
+--- a/config/sanitizers/sanitizers.gni
++++ b/config/sanitizers/sanitizers.gni
+@@ -465,7 +465,7 @@ fuzzing_engine_add_configs =
  
  # Expose clang_rt dynamic lib name to the dependents that need it as an input
  # when running an exeutable.
@@ -833,10 +755,20 @@ diff -ruN --ex build-repo/config/sanitizers/sanitizers.gni build-repo-check/conf
    if (is_mac || (is_ios && target_environment == "catalyst")) {
      if (is_asan) {
        clang_rt_dso_path = "darwin/libclang_rt.asan_osx_dynamic.dylib"
-diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.gn
---- a/config/win/BUILD.gn	2026-04-09 16:58:20
-+++ b/config/win/BUILD.gn	2026-04-09 19:01:51
-@@ -48,6 +48,7 @@
+@@ -531,7 +531,7 @@ template("ubsan_hardening") {
+       _condition = invoker.condition
+     }
+ 
+-    if (_condition && !is_ubsan && is_clang) {
++    if (_condition && !is_ubsan && is_clang && !is_mingw) {
+       cflags = [
+         "-fsanitize=${invoker.sanitizer}",
+         "-fsanitize-trap=${invoker.sanitizer}",
+diff --git a/config/win/BUILD.gn b/config/win/BUILD.gn
+index 1690897..55a18c8 100644
+--- a/config/win/BUILD.gn
++++ b/config/win/BUILD.gn
+@@ -48,6 +48,7 @@ declare_args() {
  # is applied to all targets. It is here to separate out the logic that is
  # Windows-only.
  config("compiler") {
@@ -844,7 +776,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
    if (current_cpu == "x86") {
      asmflags = [
        # When /safeseh is specified, the linker will only produce an image if it
-@@ -212,6 +213,15 @@
+@@ -216,6 +217,15 @@ config("compiler") {
      # the source file is a no-op.
      "/ignore:4221",
    ]
@@ -860,7 +792,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
  }
  
  # This is included by reference in the //build/config/compiler:runtime_library
-@@ -300,7 +310,7 @@
+@@ -304,7 +314,7 @@ config("winver") {
  
  # Linker flags for Windows SDK setup, this is applied only to EXEs and DLLs.
  config("sdk_link") {
@@ -869,7 +801,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      ldflags = [
        "/SAFESEH",  # Not compatible with x64 so use only for x86.
        "/largeaddressaware",
-@@ -312,19 +322,27 @@
+@@ -316,19 +326,27 @@ config("sdk_link") {
  # targets who want different library configurations can remove this and specify
  # their own.
  config("common_linker_setup") {
@@ -890,7 +822,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
 +    ldflags = [
 +      "-Wl,-dynamicbase",
 +      "-Wl,-nxcompat",
-     ]
++    ]
 +  } else {
 +    ldflags = [
 +      "/FIXED:NO",
@@ -898,7 +830,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
 +      "/ignore:4221",
 +      "/NXCOMPAT",
 +      "/DYNAMICBASE",
-+    ]
+     ]
 +
 +    if (win_linker_timing) {
 +      ldflags += [
@@ -909,7 +841,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
    }
  }
  
-@@ -334,12 +352,14 @@
+@@ -338,12 +356,14 @@ config("default_cfg_compiler") {
    # with CFG enabled, such as system libraries.
    # The CFG guards are only emitted if |win_enable_cfg_guards| is enabled.
    if (win_enable_cfg_guards) {
@@ -926,7 +858,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
        cflags = [ "/guard:cf,nochecks" ]
      }
      rustflags = [ "-Ccontrol-flow-guard=nochecks" ]
-@@ -352,8 +372,10 @@
+@@ -356,8 +376,10 @@ config("disable_guards_cfg_compiler") {
    # Emit table of address-taken functions for Control-Flow Guard (CFG).
    # This is needed to allow functions to be called by code that is built
    # with CFG enabled, such as system libraries.
@@ -938,7 +870,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
    }
    rustflags = [ "-Ccontrol-flow-guard=nochecks" ]
  }
-@@ -366,7 +388,7 @@
+@@ -370,7 +392,7 @@ config("cfi_linker") {
    # ASan and CFG leads to slow process startup. Chromium's test runner uses
    # lots of child processes, so this means things are really slow. Disable CFG
    # for now. https://crbug.com/846966
@@ -947,7 +879,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      # Turn on CFG bitmap generation and CFG load config.
      ldflags = [ "/guard:cf" ]
    }
-@@ -399,6 +421,7 @@
+@@ -403,6 +425,7 @@ config("cfi_linker") {
  #
  # This config applies to chrome.exe, chrome.dll, chrome_elf.dll (& others).
  config("delayloads_except_dbghelp") {
@@ -955,7 +887,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
    ldflags = [
      "/DELAYLOAD:api-ms-win-core-synch-l1-2-0.dll",
      "/DELAYLOAD:api-ms-win-core-winrt-error-l1-1-0.dll",
-@@ -457,12 +480,15 @@
+@@ -461,12 +484,15 @@ config("delayloads_except_dbghelp") {
      "/DELAYLOAD:wsock32.dll",
      "/DELAYLOAD:wtsapi32.dll",
    ]
@@ -972,7 +904,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
  }
  
  # This config should also be used for any test binary whose goal is to run
-@@ -474,12 +500,14 @@
+@@ -478,12 +504,14 @@ config("delayloads_for_tests") {
  # This config (along with `:delayloads`) applies to chrome.exe & chrome_elf.dll.
  # Entries should not appear in both configs.
  config("delayloads_not_for_child_dll") {
@@ -987,7 +919,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
  }
  
  # ACLs are placed on the filesystem in order to allow chrome to launch
-@@ -534,7 +562,7 @@
+@@ -539,7 +567,7 @@ config("default_crt") {
  # when the debug CRT is part of the bottleneck. This also avoids *implicitly*
  # defining _DEBUG.
  config("release_crt") {
@@ -996,7 +928,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      cflags = [ "/MD" ]
  
      # /MD specifies msvcrt.lib as the CRT library, which is the dynamic+release
-@@ -546,7 +574,7 @@
+@@ -551,7 +579,7 @@ config("release_crt") {
        # standard library, which libc++ needs for exception_ptr internals.
        ldflags = [ "/DEFAULTLIB:msvcprt.lib" ]
      }
@@ -1005,7 +937,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      cflags = [ "/MT" ]
  
      # /MT specifies libcmt.lib as the CRT library, which is the static+release
-@@ -561,7 +589,7 @@
+@@ -566,7 +594,7 @@ config("release_crt") {
  }
  
  config("dynamic_crt") {
@@ -1014,7 +946,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      # This pulls in the DLL debug CRT and defines _DEBUG
      cflags = [ "/MDd" ]
  
-@@ -577,7 +605,7 @@
+@@ -582,7 +610,7 @@ config("dynamic_crt") {
      if (use_custom_libcxx) {
        ldflags = [ "/DEFAULTLIB:msvcprtd.lib" ]
      }
@@ -1023,7 +955,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      cflags = [ "/MD" ]
  
      # /MD specifies msvcrt.lib as the CRT library, which is the dynamic+release
-@@ -591,7 +619,7 @@
+@@ -596,7 +624,7 @@ config("dynamic_crt") {
  }
  
  config("static_crt") {
@@ -1032,7 +964,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      # This pulls in the static debug CRT and defines _DEBUG
      cflags = [ "/MTd" ]
  
-@@ -608,7 +636,7 @@
+@@ -613,7 +641,7 @@ config("static_crt") {
      if (use_custom_libcxx) {
        ldflags = [ "/DEFAULTLIB:libcpmtd.lib" ]
      }
@@ -1041,7 +973,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      cflags = [ "/MT" ]
  
      # /MT specifies libcmt.lib as the CRT library, which is the static+release
-@@ -627,13 +655,21 @@
+@@ -632,13 +660,21 @@ config("static_crt") {
  # This is appended to the subsystem to specify a minimum version.
  # The number after the comma is the minimum required OS version.
  # Set to 10.0 since we only support >= Win10 since M110.
@@ -1066,7 +998,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
  }
  
  # Incremental linking ----------------------------------------------------------
-@@ -643,7 +679,7 @@
+@@ -648,7 +684,7 @@ config("default_incremental_linking") {
    # Enable incremental linking for debug builds and all component builds - any
    # builds where performance is not job one.
    # TODO(thakis): Always turn this on with lld, no reason not to.
@@ -1075,7 +1007,7 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      ldflags = [ "/INCREMENTAL" ]
      if (use_lld) {
        # lld doesn't use ilk files and doesn't really have an incremental link
-@@ -658,7 +694,7 @@
+@@ -663,7 +699,7 @@ config("default_incremental_linking") {
        # in lld-link.
        ldflags += [ "/OPT:NOICF" ]
      }
@@ -1084,10 +1016,11 @@ diff -ruN --ex build-repo/config/win/BUILD.gn build-repo-check/config/win/BUILD.
      ldflags = [ "/INCREMENTAL:NO" ]
    }
  }
-diff -ruN --ex build-repo/config/win/manifest.gni build-repo-check/config/win/manifest.gni
---- a/config/win/manifest.gni	2026-04-09 16:58:20
-+++ b/config/win/manifest.gni	2026-04-09 19:01:51
-@@ -72,7 +72,7 @@
+diff --git a/config/win/manifest.gni b/config/win/manifest.gni
+index 2feb96c..e4c3acc 100644
+--- a/config/win/manifest.gni
++++ b/config/win/manifest.gni
+@@ -72,7 +72,7 @@ segment_heap_manifest = "//build/win/segment_heap.manifest"
  #     ...
  #   }
  
@@ -1096,10 +1029,11 @@ diff -ruN --ex build-repo/config/win/manifest.gni build-repo-check/config/win/ma
    template("windows_manifest") {
      config_name = "${target_name}__config"
  
-diff -ruN --ex build-repo/config/win/visual_studio_version.gni build-repo-check/config/win/visual_studio_version.gni
---- a/config/win/visual_studio_version.gni	2026-04-09 16:58:20
-+++ b/config/win/visual_studio_version.gni	2026-04-09 19:01:51
-@@ -24,7 +24,7 @@
+diff --git a/config/win/visual_studio_version.gni b/config/win/visual_studio_version.gni
+index bd41166..c544721 100644
+--- a/config/win/visual_studio_version.gni
++++ b/config/win/visual_studio_version.gni
+@@ -24,7 +24,7 @@ declare_args() {
    windows_sdk_version = ""
  }
  
@@ -1108,7 +1042,7 @@ diff -ruN --ex build-repo/config/win/visual_studio_version.gni build-repo-check/
    toolchain_data =
        exec_script("../../vs_toolchain.py", [ "get_toolchain_dir" ], "scope")
    visual_studio_path = toolchain_data.vs_path
-@@ -33,7 +33,7 @@
+@@ -33,7 +33,7 @@ if (visual_studio_path == "") {
    visual_studio_version = toolchain_data.vs_version
    wdk_path = toolchain_data.wdk_dir
    visual_studio_runtime_dirs = toolchain_data.runtime_dirs
@@ -1117,63 +1051,21 @@ diff -ruN --ex build-repo/config/win/visual_studio_version.gni build-repo-check/
    assert(visual_studio_version != "",
           "You must set the visual_studio_version if you set the path")
    assert(windows_sdk_version != "",
-diff -ruN --ex build-repo/toolchain/gcc_solink_wrapper.py build-repo-check/toolchain/gcc_solink_wrapper.py
---- a/toolchain/gcc_solink_wrapper.py	2026-04-09 16:58:20
-+++ b/toolchain/gcc_solink_wrapper.py	2026-04-09 19:01:51
-@@ -24,6 +24,9 @@
-   # TODO(crbug.com/40797404): Come up with a way to get this info without having
-   # to bundle readelf in the toolchain package.
-   toc = ''
-+  # MinGW's readelf doesn't work on PE files
-+  if sys.platform == 'win32' and 'MINGW' in sys.version:
-+    return 0, toc
-   readelf = subprocess.Popen(wrapper_utils.CommandToRun(
-       [args.readelf, '-d', args.sofile]),
-                              stdout=subprocess.PIPE,
-@@ -38,6 +41,9 @@
- def CollectDynSym(args):
-   """Replaces: nm --format=posix -g -D -p $sofile | cut -f1-2 -d' '"""
-   toc = ''
-+  # MinGW's nm doesn't work on PE/COFF files
-+  if sys.platform == 'win32' and 'MINGW' in sys.version:
-+    return 0, toc
-   nm = subprocess.Popen(wrapper_utils.CommandToRun(
-       [args.nm, '--format=posix', '-g', '-D', '-p', args.sofile]),
-                         stdout=subprocess.PIPE,
-@@ -103,6 +109,9 @@
-                       help='The strip binary to run',
-                       metavar='PATH')
-   parser.add_argument('--dwp', help='The dwp binary to run', metavar='PATH')
-+  parser.add_argument('--objcopy',
-+                      help='The objcopy binary to run',
-+                      metavar='PATH')
-   parser.add_argument('--sofile',
-                       required=True,
-                       help='Shared object file produced by linking command',
-@@ -194,9 +203,19 @@
+@@ -41,6 +41,9 @@ if (visual_studio_path == "") {
+   assert(wdk_path != "",
+          "You must set the wdk_path if you set the visual studio path")
+   visual_studio_runtime_dirs = []
++} else {
++  # mingw uses no MSVC runtime dirs, but win_toolchain_data.gni references this unconditionally.
++  visual_studio_runtime_dirs = ""
+ }
  
-     # Finally, strip the linked shared object file (if desired).
-     if args.strip:
-+      if args.objcopy:
-+        result = subprocess.call(wrapper_utils.CommandToRun(
-+            [args.objcopy, '--only-keep-debug', args.sofile, args.output + '.debug']))
-+        if result != 0:
-+          return result
-       result = subprocess.call(
-           wrapper_utils.CommandToRun(
-               [args.strip, '-o', args.output, args.sofile]))
-+    if result != 0:
-+      return result
-+    if args.objcopy:
-+      result = subprocess.call(wrapper_utils.CommandToRun(
-+          [args.objcopy, '--add-gnu-debuglink', args.output + '.debug',args.output]))
- 
-   if dwp_proc:
-     dwp_result = dwp_proc.wait()
-diff -ruN --ex build-repo/toolchain/gcc_toolchain.gni build-repo-check/toolchain/gcc_toolchain.gni
---- a/toolchain/gcc_toolchain.gni	2026-04-09 16:58:20
-+++ b/toolchain/gcc_toolchain.gni	2026-04-09 19:01:51
-@@ -54,6 +54,7 @@
+ visual_studio_version_logs = [ "windows_sdk_version=${windows_sdk_version}" ]
+diff --git a/toolchain/gcc_toolchain.gni b/toolchain/gcc_toolchain.gni
+index a6b4258..6d8d828 100644
+--- a/toolchain/gcc_toolchain.gni
++++ b/toolchain/gcc_toolchain.gni
+@@ -54,6 +54,7 @@ if (enable_resource_allowlist_generation) {
  #  - cc
  #  - cxx
  #  - ld
@@ -1181,19 +1073,20 @@ diff -ruN --ex build-repo/toolchain/gcc_toolchain.gni build-repo-check/toolchain
  #
  # Optional parameters that control the tools:
  #
-@@ -249,6 +250,11 @@
-     } else {
+@@ -265,6 +266,12 @@ template("single_gcc_toolchain") {
        nm = "nm"
      }
+ 
 +    if (defined(invoker.rc)) {
 +      rc = invoker.rc
 +    } else {
 +      rc = "windres"
 +    }
-     if (defined(invoker.dwp)) {
-       dwp_switch = " --dwp=\"${invoker.dwp}\""
++
+     if (defined(invoker.shlib_extension)) {
+       default_shlib_extension = invoker.shlib_extension
      } else {
-@@ -349,6 +355,14 @@
+@@ -381,6 +388,14 @@ template("single_gcc_toolchain") {
        outputs = [ "$object_subdir/{{source_name_part}}.pcm" ]
      }
  
@@ -1208,41 +1101,7 @@ diff -ruN --ex build-repo/toolchain/gcc_toolchain.gni build-repo-check/toolchain
      tool("asm") {
        # For GCC we can just use the C compiler to compile assembly.
        depfile = "{{output}}.d"
-@@ -366,15 +380,17 @@
-       } else {
-         rspfile = "{{output}}.rsp"
-         rspfile_content = "{{inputs}}"
--        command = "\"$ar\" {{arflags}} -r -c -D {{output}} @\"$rspfile\""
-+        command = "\"$ar\" {{arflags}} -r -c -s {{output}} @\"$rspfile\""
-       }
- 
-       # Remove the output file first so that ar doesn't try to modify the
-       # existing file.
--      if (host_os == "win") {
-+      if (host_os == "win" && !is_mingw) {
-         tool_wrapper_path =
-             rebase_path("//build/toolchain/win/tool_wrapper.py", root_build_dir)
-         command = "cmd /s /c \"\"$python_path\" $tool_wrapper_path delete-file {{output}} && $command\""
-+      } else if (is_mingw) {
-+        command = "$command"
-       } else {
-         command = "rm -f {{output}} && $command"
-       }
-@@ -411,9 +427,12 @@
-       tocfile = sofile + ".TOC"
- 
-       soname_flag = ""
--      if (current_os != "aix") {
-+      if (current_os != "aix" && current_os != "win") {
-         # -soname flag is not available on aix ld
-         soname_flag = "-Wl,-soname=\"$soname\""
-+      } else if (is_mingw) {
-+        # Have MinGW linker generate an import library
-+        soname_flag = "-Wl,--out-implib=\"$soname.a\""
-       }
-       link_command = "$ld -shared $soname_flag {{ldflags}}${extra_ldflags} -o \"$unstripped_sofile\" @\"$rspfile\" {{rlibs}}"
- 
-@@ -449,6 +468,8 @@
+@@ -498,6 +513,8 @@ template("single_gcc_toolchain") {
  
        if (target_cpu == "mipsel" && is_component_build && is_android) {
          rspfile_content = "-Wl,--start-group -Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}} -Wl,--end-group"
@@ -1251,19 +1110,11 @@ diff -ruN --ex build-repo/toolchain/gcc_toolchain.gni build-repo-check/toolchain
        } else if (current_os == "aix") {
          # --whole-archive, --no-whole-archive flags are not available on the aix
          # ld.
-@@ -591,7 +612,7 @@
-       # We need to specify link groups, at least, for single pass linkers. I.e.
-       # Rust libraries are alpha-sorted instead of by dependencies so they fail
-       # to link if not properly ordered or grouped.
--      link_command = "$ld {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" $start_group_flag @\"$rspfile\" $end_group_flag {{solibs}} {{libs}} $start_group_flag {{rlibs}} $end_group_flag"
-+      link_command = "$ld {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" @\"$rspfile\" $start_group_flag {{solibs}} {{libs}} $end_group_flag {{rlibs}}"
- 
-       # Generate a map file to be used for binary size analysis.
-       # Map file adds ~10% to the link time on a z620.
-diff -ruN --ex build-repo/toolchain/siso.gni build-repo-check/toolchain/siso.gni
---- a/toolchain/siso.gni	2026-04-09 16:58:20
-+++ b/toolchain/siso.gni	2026-04-09 19:01:51
-@@ -6,13 +6,6 @@
+diff --git a/toolchain/siso.gni b/toolchain/siso.gni
+index 63dea48..f2b4456 100644
+--- a/toolchain/siso.gni
++++ b/toolchain/siso.gni
+@@ -6,13 +6,6 @@ import("//build/config/gclient_args.gni")
  # need to match with autoninja's logic.
  use_siso_default = false
  
@@ -1277,10 +1128,11 @@ diff -ruN --ex build-repo/toolchain/siso.gni build-repo-check/toolchain/siso.gni
  declare_args() {
    # Placeholder to allow having use_siso in args.gn file.
    # Explicit `use_siso` in args.gn can override default.
-diff -ruN --ex build-repo/toolchain/toolchain.gni build-repo-check/toolchain/toolchain.gni
---- a/toolchain/toolchain.gni	2026-04-09 16:58:20
-+++ b/toolchain/toolchain.gni	2026-04-09 19:01:51
-@@ -71,7 +71,7 @@
+diff --git a/toolchain/toolchain.gni b/toolchain/toolchain.gni
+index 17d08eb..92538e0 100644
+--- a/toolchain/toolchain.gni
++++ b/toolchain/toolchain.gni
+@@ -71,7 +71,7 @@ if (host_os == "mac") {
  }
  
  # Prefix for shared library files.
@@ -1289,7 +1141,7 @@ diff -ruN --ex build-repo/toolchain/toolchain.gni build-repo-check/toolchain/too
    shlib_prefix = "lib"
  } else {
    shlib_prefix = ""
-@@ -92,12 +92,15 @@
+@@ -92,12 +92,15 @@ if (is_fuchsia) {
  # four variables reduce the duplication in that boilerplate.
  stamp_description = "STAMP {{output}}"
  copy_description = "COPY {{source}} {{output}}"
@@ -1306,10 +1158,11 @@ diff -ruN --ex build-repo/toolchain/toolchain.gni build-repo-check/toolchain/too
  } else {
    stamp_command = "touch {{output}}"
    copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
-diff -ruN --ex build-repo/toolchain/win/BUILD.gn build-repo-check/toolchain/win/BUILD.gn
---- a/toolchain/win/BUILD.gn	2026-04-09 16:58:20
-+++ b/toolchain/win/BUILD.gn	2026-04-09 19:01:51
-@@ -15,7 +15,7 @@
+diff --git a/toolchain/win/BUILD.gn b/toolchain/win/BUILD.gn
+index 87d1e4a..60f618a 100644
+--- a/toolchain/win/BUILD.gn
++++ b/toolchain/win/BUILD.gn
+@@ -15,7 +15,7 @@ assert(is_win, "Should only be running on Windows")
  
  # Copy the VS runtime DLL for the default toolchain to the root build directory
  # so things will run.
@@ -1318,7 +1171,7 @@ diff -ruN --ex build-repo/toolchain/win/BUILD.gn build-repo-check/toolchain/win/
    if (is_debug) {
      configuration_name = "Debug"
    } else {
-@@ -30,7 +30,7 @@
+@@ -30,7 +30,7 @@ if (current_toolchain == default_toolchain) {
                ])
  }
  
@@ -1327,7 +1180,7 @@ diff -ruN --ex build-repo/toolchain/win/BUILD.gn build-repo-check/toolchain/win/
    win_toolchains("x86") {
      toolchain_arch = "x86"
    }
-@@ -39,7 +39,7 @@
+@@ -39,7 +39,7 @@ if (target_cpu == "x86" || target_cpu == "x64") {
    }
  }
  
@@ -1336,12 +1189,10 @@ diff -ruN --ex build-repo/toolchain/win/BUILD.gn build-repo-check/toolchain/win/
    win_toolchains("arm64") {
      toolchain_arch = "arm64"
    }
-@@ -78,5 +78,19 @@
-       current_cpu = target_cpu
-       is_clang = false
+@@ -80,3 +80,17 @@ if (target_os == "winuwp") {
      }
-+  }
-+}
+   }
+ }
 +
 +if (is_mingw) {
 +  mingw_toolchain("x86") {
@@ -1354,33 +1205,30 @@ diff -ruN --ex build-repo/toolchain/win/BUILD.gn build-repo-check/toolchain/win/
 +
 +  mingw_toolchain("arm64") {
 +    toolchain_arch = "arm64"
-   }
- }
-diff -ruN --ex build-repo/toolchain/win/toolchain.gni build-repo-check/toolchain/win/toolchain.gni
---- a/toolchain/win/toolchain.gni	2026-04-09 16:58:20
-+++ b/toolchain/win/toolchain.gni	2026-04-09 19:01:51
-@@ -10,8 +10,13 @@
++  }
++}
+diff --git a/toolchain/win/toolchain.gni b/toolchain/win/toolchain.gni
+index 5a8e519..1c4e134 100644
+--- a/toolchain/win/toolchain.gni
++++ b/toolchain/win/toolchain.gni
+@@ -10,7 +10,12 @@ import("//build/config/win/visual_studio_version.gni")
  import("//build/toolchain/cc_wrapper.gni")
  import("//build/toolchain/rbe.gni")
  import("//build/toolchain/toolchain.gni")
 -import("//build/toolchain/win/win_toolchain_data.gni")
- 
++
 +if (is_mingw) {
 +  import("//build/toolchain/gcc_toolchain.gni")
 +} else {
 +  import("//build/toolchain/win/win_toolchain_data.gni")
 +}
-+
+ 
  assert(is_win, "Should only be running on Windows")
  
- # This tool will is used as a wrapper for various commands below.
-@@ -906,6 +911,30 @@
-       is_clang = true
-       current_os = "win"
-       current_cpu = rust_host_toolchain_arch
-+    }
-+  }
-+}
+@@ -965,3 +970,27 @@ template("win_toolchains") {
+     }
+   }
+ }
 +
 +template("mingw_toolchain") {
 +  gcc_toolchain("mingw_" + target_name) {
@@ -1402,13 +1250,101 @@ diff -ruN --ex build-repo/toolchain/win/toolchain.gni build-repo-check/toolchain
 +    toolchain_args = {
 +      current_os = "win"
 +      current_cpu = toolchain_arch
-     }
++    }
++  }
++}
+diff --git a/toolchain/win/win_toolchain_data.gni b/toolchain/win/win_toolchain_data.gni
+index a6e8328..d05b4c6 100644
+--- a/toolchain/win/win_toolchain_data.gni
++++ b/toolchain/win/win_toolchain_data.gni
+@@ -5,40 +5,56 @@
+ import("//build/config/win/visual_studio_version.gni")
+ 
+ declare_args() {
+-  win_toolchain_data_x86 =
+-      exec_script("//build/toolchain/win/setup_toolchain.py",
+-                  [
+-                    visual_studio_path,
+-                    windows_sdk_path,
+-                    visual_studio_runtime_dirs,
+-                    "win",
+-                    "x86",
+-                    "environment.x86",
+-                  ],
+-                  "scope")
++  # mingw (llvm-mingw/clang) does not use the MSVC toolchain, and running
++  # setup_toolchain.py with the empty visual_studio_path mingw leaves unset makes
++  # gn drop the empty CLI args, so the script aborts with a usage error. Skip it
++  # entirely for mingw -- the msvc_toolchain targets that read these scopes are
++  # never the default toolchain on a mingw build, so empty scopes are never read.
++  if (is_mingw) {
++    win_toolchain_data_x86 = {
++    }
++    win_toolchain_data_x64 = {
++    }
++    if (target_cpu == "arm64" || host_cpu == "arm64") {
++      win_toolchain_data_arm64 = {
++      }
++    }
++  } else {
++    win_toolchain_data_x86 =
++        exec_script("//build/toolchain/win/setup_toolchain.py",
++                    [
++                      visual_studio_path,
++                      windows_sdk_path,
++                      visual_studio_runtime_dirs,
++                      "win",
++                      "x86",
++                      "environment.x86",
++                    ],
++                    "scope")
+ 
+-  win_toolchain_data_x64 =
+-      exec_script("//build/toolchain/win/setup_toolchain.py",
+-                  [
+-                    visual_studio_path,
+-                    windows_sdk_path,
+-                    visual_studio_runtime_dirs,
+-                    "win",
+-                    "x64",
+-                    "environment.x64",
+-                  ],
+-                  "scope")
+-  if (target_cpu == "arm64" || host_cpu == "arm64") {
+-    win_toolchain_data_arm64 =
++    win_toolchain_data_x64 =
+         exec_script("//build/toolchain/win/setup_toolchain.py",
+                     [
+                       visual_studio_path,
+                       windows_sdk_path,
+                       visual_studio_runtime_dirs,
+                       "win",
+-                      "arm64",
+-                      "environment.arm64",
++                      "x64",
++                      "environment.x64",
+                     ],
+                     "scope")
++    if (target_cpu == "arm64" || host_cpu == "arm64") {
++      win_toolchain_data_arm64 =
++          exec_script("//build/toolchain/win/setup_toolchain.py",
++                      [
++                        visual_studio_path,
++                        windows_sdk_path,
++                        visual_studio_runtime_dirs,
++                        "win",
++                        "arm64",
++                        "environment.arm64",
++                      ],
++                      "scope")
++    }
    }
  }
-diff -ruN --ex build-repo/util/lastchange.py build-repo-check/util/lastchange.py
---- a/util/lastchange.py	2026-04-09 16:58:20
-+++ b/util/lastchange.py	2026-04-09 19:01:51
-@@ -22,8 +22,6 @@
+diff --git a/util/lastchange.py b/util/lastchange.py
+index 7823208..03ce1e4 100755
+--- a/util/lastchange.py
++++ b/util/lastchange.py
+@@ -22,8 +22,6 @@ _ROOT_DIR = os.path.abspath(
  
  sys.path.insert(0, _ROOT_DIR)
  
@@ -1417,7 +1353,7 @@ diff -ruN --ex build-repo/util/lastchange.py build-repo-check/util/lastchange.py
  VersionInfo = collections.namedtuple(
      "VersionInfo", ("revision_id", "revision", "commit_position", "timestamp"))
  _EMPTY_VERSION_INFO = VersionInfo('0' * 40, '0' * 40, '', 0)
-@@ -237,7 +235,10 @@
+@@ -253,7 +251,10 @@ def GetGitTopDirectory(source_dir):
    Returns:
      The output of "git rev-parse --show-toplevel" as a string
    """
@@ -1429,20 +1365,11 @@ diff -ruN --ex build-repo/util/lastchange.py build-repo-check/util/lastchange.py
  
  
  def WriteIfChanged(file_name, contents):
-@@ -264,9 +265,6 @@
-   """
-   if 'BASE_COMMIT_SUBMISSION_MS' in os.environ:
-     return GetVersionInfoFromEnv()
--
--  if gclient_utils.IsEnvCog():
--    return _EMPTY_VERSION_INFO
- 
-   git_top_dir = None
-   try:
-diff -ruN --ex build-repo/win/BUILD.gn build-repo-check/win/BUILD.gn
---- a/win/BUILD.gn	2026-04-09 16:58:20
-+++ b/win/BUILD.gn	2026-04-09 19:01:51
-@@ -16,7 +16,7 @@
+diff --git a/win/BUILD.gn b/win/BUILD.gn
+index 3eb5520..d1f5fcd 100644
+--- a/win/BUILD.gn
++++ b/win/BUILD.gn
+@@ -16,7 +16,7 @@ windows_manifest("default_exe_manifest") {
    ]
  }
  
@@ -1451,13 +1378,12 @@ diff -ruN --ex build-repo/win/BUILD.gn build-repo-check/win/BUILD.gn
    assert(host_os != "mac" || target_cpu != "x86",
           "Windows cross-builds from Mac must be 64-bit.")
  
-@@ -78,5 +78,9 @@
-         data += [ "$clang_base_path/lib/clang/$clang_version/lib/windows/clang_rt.asan_dynamic-x86_64.dll" ]
+@@ -79,4 +79,8 @@ if (is_win) {
        }
      }
-+  }
+   }
 +} else {
 +  group("runtime_libs") {
 +    data = []
-   }
++  }
  }

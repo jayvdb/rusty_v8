@@ -1,0 +1,15 @@
+diff --git a/absl/random/internal/BUILD.gn b/absl/random/internal/BUILD.gn
+index 16df061..83e2966 100644
+--- a/absl/random/internal/BUILD.gn
++++ b/absl/random/internal/BUILD.gn
+@@ -40,7 +40,9 @@ absl_source_set("fast_uniform_bits") {
+ absl_source_set("seed_material") {
+   public = [ "seed_material.h" ]
+   sources = [ "seed_material.cc" ]
+-  if (is_win) {
++  if (is_mingw) {
++    libs = [ "bcrypt" ]
++  } else if (is_win) {
+     # TODO(mbonadei): In the bazel file this is -DEFAULTLIB:bcrypt.lib.
+     libs = [ "bcrypt.lib" ]
+   }
